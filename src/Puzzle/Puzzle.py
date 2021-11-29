@@ -30,3 +30,6 @@ class Puzzle():
             factor += 0.01
             self.extract = Extractor(path, factor)
             self.pieces_ = self.extract.extract()
+            
+            
+
