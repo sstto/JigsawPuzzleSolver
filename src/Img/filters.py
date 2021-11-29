@@ -279,12 +279,11 @@ def type_peak(peaks_pos_inside, peaks_neg_inside):
         return TypeEdge.HEAD
     return TypeEdge.UNDEFINED
 
-def my_find_corner_signature(cnt, green=False):
+def my_find_corner_signature(cnt):
     """
         Determine the corner/edge positions by analyzing contours.
 
         :param cnt: contour to analyze
-        :param green: boolean used to activate green background mode
         :type cnt: list of tuple of points
         :return: Corners coordinates, Edges lists of points, type of pieces
     """
@@ -294,9 +293,9 @@ def my_find_corner_signature(cnt, green=False):
     types_pieces = []
     sigma = 5
     max_sigma = 12
-    if not green:
-        sigma = 5
-        max_sigma = 15
+
+    sigma = 5
+    max_sigma = 15
     while sigma <= max_sigma:
         print("Smooth curve with sigma={}...".format(sigma))
 
@@ -394,7 +393,7 @@ def angle_between(v1, v2):
 
     return math.atan2(-v1[1], v1[0]) - math.atan2(-v2[1], v2[0])
 
-def export_contours(img, img_bw, contours, path, modulo, viewer=None, green=False):
+def export_contours(img, img_bw, contours, path, modulo):
     """
         Find the corners/shapes of all contours and build an array of puzzle Pieces
 
@@ -402,8 +401,6 @@ def export_contours(img, img_bw, contours, path, modulo, viewer=None, green=Fals
         :param img_bw: matrix of the img in black and white
         :param contours: lists of tuples of coordinates of contours
         :param path: Path used to export pieces img
-        :path viewer: Object used for GUI display
-        :param green: boolean used to activate green background mode
         :return: puzzle Piece array
     """
 
@@ -413,7 +410,7 @@ def export_contours(img, img_bw, contours, path, modulo, viewer=None, green=Fals
 
     for idx, cnt in enumerate(contours):
         
-        corners, edges_shape, types_edges = my_find_corner_signature(cnt, green)
+        corners, edges_shape, types_edges = my_find_corner_signature(cnt)
         if corners is None:
             return None
         
@@ -499,7 +496,6 @@ def export_contours(img, img_bw, contours, path, modulo, viewer=None, green=Fals
 
     cv2.imwrite("/tmp/color_border.png", out_color)
     cv2.imwrite(path, pieces_img)
-    if viewer:
-        viewer.addImage("Extracted colored border", "/tmp/color_border.png")
+
 
     return puzzle_pieces

@@ -3,7 +3,6 @@ from scipy import ndimage
 from cv2 import cv2
 import sys
 import numpy as np
-from Img.GreenScreen import *
 from Img.filters import *
 
 PREPROCESS_DEBUG_MODE = 0
@@ -29,31 +28,15 @@ class Extractor():
         Class used for preprocessing and pieces extraction
     """
 
-    def __init__(self, path, viewer=None, green_screen=False, factor=0.84):
+    def __init__(self, path, factor=0.84):
         self.path = path
         self.img = cv2.imread(self.path, cv2.IMREAD_COLOR)
-        if green_screen:
-            self.img = cv2.medianBlur(self.img, 5)
-            divFactor = 1 / (self.img.shape[1] / 640)
-            print(self.img.shape)
-            print('Resizing with factor', divFactor)
-            self.img = cv2.resize(self.img, (0, 0), fx=divFactor, fy=divFactor)
-            cv2.imwrite("/tmp/resized.png", self.img)
-            remove_background("/tmp/resized.png", factor=factor)
-            self.img_bw = cv2.imread("/tmp/green_background_removed.png", cv2.IMREAD_GRAYSCALE)
-            # rescale self.img and self.img_bw to 640
-        else:
-            self.img_bw = cv2.imread(self.path, cv2.IMREAD_GRAYSCALE)
-        self.viewer = viewer
-        self.green_ = green_screen
+        self.img_bw = cv2.imread(self.path, cv2.IMREAD_GRAYSCALE)
         self.kernel_ = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
 
     def log(self, *args):
         """ Helper function to log informations to the GUI """
-
         print(' '.join(map(str, args)))
-        if self.viewer:
-            self.viewer.addLog(args)
 
     def extract(self):
         """
@@ -64,8 +47,6 @@ class Extractor():
         kernel = np.ones((3, 3), np.uint8)
 
         cv2.imwrite("/tmp/binarized.png", self.img_bw)
-        if self.viewer is not None:
-            self.viewer.addImage("Binarized", "/tmp/binarized.png")
 
         ### Implementation of random functions, actual preprocessing is down below
 
@@ -93,24 +74,19 @@ class Extractor():
         ### PREPROCESSING: starts there
 
         # With this we apply morphologic operations (CLOSE, OPEN and GRADIENT)
-        if not self.green_:
-            generated_preprocesing()
-        else:
-            real_preprocessing()
+        generated_preprocesing()
+
         # These prints are activated only if the PREPROCESS_DEBUG_MODE variable at the top is set to 1
         if PREPROCESS_DEBUG_MODE == 1:
             show_image(self.img_bw)
 
         # With this we fill the holes in every contours, to make sure there is no fragments inside the pieces
-        if not self.green_:
-            fill_holes()
+        fill_holes()
 
         if PREPROCESS_DEBUG_MODE == 1:
             show_image(self.img_bw)
 
         cv2.imwrite("/tmp/binarized_treshold_filled.png", self.img_bw)
-        if self.viewer is not None:
-            self.viewer.addImage("Binarized treshold", "/tmp/binarized_treshold_filled.png")
 
         self.img_bw, contours, hier = cv2.findContours(self.img_bw, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         self.log('Found nb pieces: ' + str(len(contours)))
@@ -142,7 +118,7 @@ class Extractor():
         # while True: # TODO Add this at the end of the project, it is a fallback tactic
        
         self.log('>>> START contour/corner detection')
-        puzzle_pieces = export_contours(self.img, self.img_bw, contours, "/tmp/contours.png", 5, viewer=self.viewer, green=self.green_)
+        puzzle_pieces = export_contours(self.img, self.img_bw, contours, "/tmp/contours.png", 5)
         if puzzle_pieces is None:
             # Export contours error
             return None

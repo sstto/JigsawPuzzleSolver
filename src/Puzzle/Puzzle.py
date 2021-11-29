@@ -19,37 +19,19 @@ class Puzzle():
 
     def log(self, *args):
         """ Helper to log informations to the GUI """
-
         print(' '.join(map(str, args)))
-        if self.viewer:
-            self.viewer.addLog(args)
 
-    def __init__(self, path, viewer=None, green_screen=False):
+    def __init__(self, path):
         """ Extract informations of pieces in the img at `path` and start computation of the solution """
 
         self.pieces_ = None
         factor = 0.40
         while self.pieces_ is None:
             factor += 0.01
-            self.extract = Extractor(path, viewer, green_screen, factor)
+            self.extract = Extractor(path, factor)
             self.pieces_ = self.extract.extract()
-        # import numpy as np
-        # # print(self.pieces_[0].position)
-        # # print(len(np.array(self.pieces_[0].edges_)))
-        # print((np.array(self.pieces_[0].img_piece_)[0].pos))
-        # print((np.array(self.pieces_[0].img_piece_)[0].color))
-        # for i in range(0, 30):
-        #     print(np.array(self.pieces_[i].nBorders_))
-        # # print(np.array(self.pieces_[0].type))
-        # import sys
-        # sys.exit()
-        # self.img_piece_ = img_piece  # List of Pixels
-        # self.nBorders_ = self.number_of_border()
-        # self.type = TypePiece(self.nBorders_)
 
 
-        self.viewer = viewer
-        self.green_ = green_screen
         self.connected_directions = []
         self.diff = {}
         self.edge_to_piece = {}
@@ -210,10 +192,7 @@ class Puzzle():
                 for e2 in piece.edges_:
                     e2.backup_shape()
                 stick_pieces(new_connected, e, piece, edge)
-                if self.green_:
-                    diff_e[edge] = real_edge_compute(edge, e)
-                else:
-                    diff_e[edge] = generated_edge_compute(edge, e)
+                diff_e[edge] = generated_edge_compute(edge, e)
                 for e2 in piece.edges_:
                     e2.restore_backup_shape()
 
@@ -352,10 +331,7 @@ class Puzzle():
                 for e2 in piece.edges_:
                     e2.backup_shape()
                 stick_pieces(self.edge_to_piece[e], e, piece, edge)
-                if self.green_:
-                    diff_e[edge] = real_edge_compute(edge, e)
-                else:
-                    diff_e[edge] = generated_edge_compute(edge, e)
+                diff_e[edge] = generated_edge_compute(edge, e)
                 for e2 in piece.edges_:
                     e2.restore_backup_shape()
 
@@ -483,13 +459,10 @@ class Puzzle():
         cv2.imwrite(path_contour, border_img)
         cv2.imwrite(path_colored, colored_img)
 
+        print(path_colored[5:])
         cv2.imwrite('../result/'+ path_colored[5:], colored_img)
         cv2.imwrite('../result/'+path_contour[5:], border_img)
 
-        if self.viewer and display:
-            if display_border:
-                self.viewer.addImage(name_contour, path_contour, display=False)
-            self.viewer.addImage(name_colored, path_colored)
 
 
     def compute_possible_size(self, nb_piece, nb_border):
