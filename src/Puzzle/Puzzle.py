@@ -39,9 +39,12 @@ class Puzzle():
             	print('position: ',p.position)
             	for i, e in enumerate(p.edges_) :
             		print(i, 'th edge: ', 'type: ', e.type, 'direction: ', e.direction, 'connected: ', e.connected)
+            		print(len(e.shape))
             	print('piece num: ', len(p.img_piece_))
             	print('nBorder: ', p.nBorders_)
             	print('type: ', p.type)
             	print('\n\n')
+            	
+            
           
   
