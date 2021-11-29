@@ -1,0 +1,7 @@
+numpy==1.15.0
+scipy==1.0.0
+scikit_image==0.13.1
+opencv_python==3.3.0.10
+matplotlib==2.1.0
+Pillow
+scikit_learn>=0.18.1
