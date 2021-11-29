@@ -4,6 +4,8 @@ from Puzzle.PuzzlePiece import *
 from Puzzle.Extractor import Extractor
 from Puzzle.Mover import *
 from cv2 import cv2
+import math
+import numpy as np
 
 from Puzzle.Enums import *
 import sys
@@ -65,13 +67,60 @@ class Puzzle():
             break
 
     def find_matching_piece(self, ref_edge, candidate_pieces):
-        # if ref_edge.type == TypeEdge.HEAD:
-        #     self.log("HEAD")
-        #     for candidate_piece in candidate_pieces:
-        #         for edge in candidate_piece:
-        #             if edge == TypeEdge.HOLE:
-        #
-        #
-        #
-        # if ref_edge.type == TypeEdge.HOLE:
-        #     self.log("HOLE")
+        r_x1, r_y1 = ref_edge.shape[0]
+        r_x2, r_y2 = ref_edge.shape[-1]
+        r_theta = math.atan2(r_y2 - r_y1, r_x2 - r_x1)
+
+        if ref_edge.type == TypeEdge.HOLE:
+            for candidate_piece in candidate_pieces:
+                for edge in candidate_piece.edges_:
+                    if edge.type == TypeEdge.HEAD:
+                        x1, y1 = edge.shape[-1]
+                        x2, y2 = edge.shape[0]
+                        theta = math.atan2(y2-y1, x2-x1)
+
+                        theta_diff = r_theta - theta
+
+                        rot_matrix = np.array([[math.cos(theta_diff), math.sin(theta_diff)],
+                                               [-math.sin(theta_diff), math.cos(theta_diff)]])
+
+                        rotated_pixels = np.array(edge.shape)@rot_matrix
+
+                        translate = np.array([r_x1-rotated_pixels[-1][0], r_y1-rotated_pixels[-1][1]])
+                        translated_pixels = rotated_pixels + translate
+
+                        import matplotlib.pyplot as plt
+                        #plt.scatter(rotated_pixels[...,0],rotated_pixels[...,1], color='r')
+                        plt.scatter(translated_pixels[...,0], translated_pixels[..., 1], color='g')
+                        plt.scatter(ref_edge.shape[...,0], ref_edge.shape[..., 1], color='k')
+                        plt.show()
+
+                        x1, y1 = edge.shape[0]
+                        x2, y2 = edge.shape[-1]
+                        theta = math.atan2(y2 - y1, x2 - x1)
+
+                        theta_diff = r_theta - theta
+
+                        rot_matrix = np.array([[math.cos(theta_diff), math.sin(theta_diff)],
+                                               [-math.sin(theta_diff), math.cos(theta_diff)]])
+
+                        rotated_pixels = np.array(edge.shape) @ rot_matrix
+
+                        translate = np.array([r_x1 - rotated_pixels[0][0], r_y1 - rotated_pixels[0][1]])
+                        translated_pixels = rotated_pixels + translate
+
+                        import matplotlib.pyplot as plt
+                        # plt.scatter(rotated_pixels[...,0],rotated_pixels[...,1], color='r')
+                        plt.scatter(translated_pixels[..., 0], translated_pixels[..., 1], color='g')
+                        plt.scatter(ref_edge.shape[..., 0], ref_edge.shape[..., 1], color='k')
+                        plt.show()
+                        # import sys
+                        # sys.exit()
+
+
+
+
+
+
+        if ref_edge.type == TypeEdge.HEAD:
+            self.log("HOLE")
