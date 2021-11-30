@@ -13,10 +13,33 @@ from Puzzle.tuple_helper import equals_tuple, add_tuple, sub_tuple, is_neigbhor,
 
 
 def euclidean(ref, trans):
+    min1=0
     if len(ref) > len(trans):
-        return np.sqrt(np.sum((ref[0:len(trans)] - trans) ** 2))
+        short = trans
+        long = ref
+    else :
+        short = ref
+        long = trans
+
+    idx = np.array(range(len(short)))/len(short)*len(long)
+    idx = np.around(idx).astype(int)
+    min1 = np.sum(np.sqrt(np.sum((long[idx] - short) ** 2, axis=1)))
+
+
+    trans = np.flip(trans, axis=0)
+    min2 = 0
+    if len(ref) > len(trans):
+        short = trans
+        long = ref
     else:
-        return np.sqrt(np.sum((ref - trans[0:len(ref)]) ** 2))
+        short = ref
+        long = trans
+
+    idx = np.array(range(len(short))) / len(short) * len(long)
+    idx = np.around(idx).astype(int)
+    min2 = np.sum(np.sqrt(np.sum((long[idx] - short) ** 2, axis=1)))
+
+    return min(min1, min2) # overhead TODO (translated pixel 은 1만)
 
 def show(piece) :
     x_coord = []
@@ -71,39 +94,44 @@ class Puzzle():
         for b_piece in border_pieces:
             if b_piece.nBorders_ == 2:
                 complete_pieces.append(b_piece)
-                show(b_piece)
                 border_pieces.remove(b_piece)
-
                 break
 
         while len(border_pieces) > 0:
             is_valid = True
             for c_piece in complete_pieces:
+
                 for c_edge in c_piece.edges_:
                     if not c_edge.connected:
-                        print(c_edge.type)
-                        friend = self.find_matching_piece(c_edge, border_pieces)
+                        print('ref')
+                        show(c_piece)
+
+                        friend, i = self.find_matching_piece(c_edge, border_pieces)
+                        print('friend')
                         show(friend)
-
-
-
+                        friend.edges_[i].connected = True
+                        c_edge.connected = True
                         is_valid = False
                         break
                 if not is_valid:
                     break
-            break
+
+            border_pieces.remove(friend)
+            complete_pieces.append(friend)
+
 
     def find_matching_piece(self, ref_edge, candidate_pieces):
         r_x1, r_y1 = ref_edge.shape[0]
         r_x2, r_y2 = ref_edge.shape[-1]
         r_theta = math.atan2(r_y2 - r_y1, r_x2 - r_x1)
 
-        minimum = 999999999999999999
+        minimum = 9999999999
         minArg = None
+        minEdge = None
 
         if ref_edge.type == TypeEdge.HOLE:
             for candidate_piece in candidate_pieces:
-                for edge in candidate_piece.edges_:
+                for i, edge in enumerate(candidate_piece.edges_) :
                     if edge.type == TypeEdge.HEAD:
                         #===================Rotation 1=======================
                         x1, y1 = edge.shape[-1]
@@ -136,16 +164,17 @@ class Puzzle():
                         translated_pixels2 = rotated_pixels + translate
 
                         #======================Euclidean====================
-                        diff1 = euclidean(edge.shape, translated_pixels1)
-                        diff2 = euclidean(edge.shape, translated_pixels2)
+                        diff1 = euclidean(ref_edge.shape, translated_pixels1)
+                        diff2 = euclidean(ref_edge.shape, translated_pixels2)
 
                         if min(diff1, diff2) < minimum:
                             minimum = min(diff1, diff2)
                             minArg = candidate_piece
+                            minEdge = i
 
         else:  # ref_edge.type == TypeEdge.HEAD:
             for candidate_piece in candidate_pieces:
-                for edge in candidate_piece.edges_:
+                for i, edge in enumerate(candidate_piece.edges_):
                     if edge.type == TypeEdge.HOLE:
                         # ===================Rotation 1=======================
                         x1, y1 = edge.shape[-1]
@@ -178,14 +207,15 @@ class Puzzle():
                         translated_pixels2 = rotated_pixels + translate
 
                         # ======================Euclidean====================
-                        diff1 = euclidean(edge.shape, translated_pixels1)
-                        diff2 = euclidean(edge.shape, translated_pixels2)
+                        diff1 = euclidean(ref_edge.shape, translated_pixels1)
+                        diff2 = euclidean(ref_edge.shape, translated_pixels2)
 
                         if min(diff1, diff2) < minimum:
-                            minimum = math.min(diff1, diff2)
+                            minimum = min(diff1, diff2)
                             minArg = candidate_piece
+                            minEdge = i
 
-        return minArg
+        return minArg, minEdge
 
 
 
