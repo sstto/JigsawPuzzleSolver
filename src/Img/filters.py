@@ -58,10 +58,10 @@ def get_relative_angles(cnt, export=False, sigma=5):
     angles = angles[0:length]
 
     if export:
-        pickle.dump(angles, open("/tmp/save" + str(COUNT) + ".p", "wb"))
+        pickle.dump(angles, open("../result/save" + str(COUNT) + ".p", "wb"))
 
         plt.plot(np.append(angles, angles))
-        plt.savefig("/tmp/fig" + str(COUNT) + ".png")
+        plt.savefig("../result/fig" + str(COUNT) + ".png")
         plt.clf()
         plt.cla()
         plt.close()
@@ -494,7 +494,7 @@ def export_contours(img, img_bw, contours, path, modulo):
         (max_width * (index % modulo)):(max_width * (index % modulo) + image.shape[1])] = image
 
 
-    cv2.imwrite("/tmp/color_border.png", out_color)
+    cv2.imwrite("../result/color_border.png", out_color)
     cv2.imwrite(path, pieces_img)
 
 

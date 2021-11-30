@@ -21,7 +21,7 @@ def show_contours(contours, imgRef):
     whiteImg = np.zeros(imgRef.shape)
     cv2.drawContours(whiteImg, contours, -1, (255, 0, 0), 1, maxLevel=1)
     show_image(whiteImg)
-    cv2.imwrite("/tmp/cont.png", whiteImg)
+    cv2.imwrite("../result/cont.png", whiteImg)
 
 class Extractor():
     """
@@ -46,7 +46,7 @@ class Extractor():
 
         kernel = np.ones((3, 3), np.uint8)
 
-        cv2.imwrite("/tmp/binarized.png", self.img_bw)
+        cv2.imwrite("../result/binarized.png", self.img_bw)
 
         ### Implementation of random functions, actual preprocessing is down below
 
@@ -59,7 +59,7 @@ class Extractor():
 
         def generated_preprocesing():
             ret, self.img_bw = cv2.threshold(self.img_bw, 254, 255, cv2.THRESH_BINARY_INV)
-            cv2.imwrite("/tmp/otsu_binarized.png", self.img_bw)
+            cv2.imwrite("../result/otsu_binarized.png", self.img_bw)
             self.img_bw = cv2.morphologyEx(self.img_bw, cv2.MORPH_CLOSE, kernel)                
             self.img_bw = cv2.morphologyEx(self.img_bw, cv2.MORPH_OPEN, kernel)
             
@@ -86,7 +86,7 @@ class Extractor():
         if PREPROCESS_DEBUG_MODE == 1:
             show_image(self.img_bw)
 
-        cv2.imwrite("/tmp/binarized_treshold_filled.png", self.img_bw)
+        cv2.imwrite("../result/binarized_treshold_filled.png", self.img_bw)
 
         self.img_bw, contours, hier = cv2.findContours(self.img_bw, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         self.log('Found nb pieces: ' + str(len(contours)))
@@ -118,7 +118,7 @@ class Extractor():
         # while True: # TODO Add this at the end of the project, it is a fallback tactic
        
         self.log('>>> START contour/corner detection')
-        puzzle_pieces = export_contours(self.img, self.img_bw, contours, "/tmp/contours.png", 5)
+        puzzle_pieces = export_contours(self.img, self.img_bw, contours, "../result/contours.png", 5)
         if puzzle_pieces is None:
             # Export contours error
             return None
