@@ -15,6 +15,11 @@ class Edge:
         self.type = type
         self.connected = connected
         self.direction = direction
+        self.length = self.calculate_length()
+        
+    def calculate_length(self):
+        shape =np.array(self.shape)
+        return np.sum(np.sqrt(np.sum(np.diff(shape, axis=0)**2, axis=1)))
 
     def is_border(self, threshold):
         """
