@@ -1,18 +1,37 @@
 from Puzzle.Distance import diff_match_edges, real_edge_compute, generated_edge_compute
 from Puzzle.PuzzlePiece import *
-
 from Puzzle.Extractor import Extractor
 from Puzzle.Mover import *
 from cv2 import cv2
 import math
 import numpy as np
-
 from Puzzle.Enums import *
 import sys
 import scipy
-
+import matplotlib.pyplot as plt
 from Puzzle.tuple_helper import equals_tuple, add_tuple, sub_tuple, is_neigbhor, corner_puzzle_alignement, display_dim
 
+
+def euclidean(ref, trans):
+    if len(ref) > len(trans):
+        return np.sqrt(np.sum((ref[0:len(trans)] - trans) ** 2))
+    else:
+        return np.sqrt(np.sum((ref - trans[0:len(ref)]) ** 2))
+
+def show(piece) :
+    x_coord = []
+    y_coord = []
+    color = []
+
+    for pixel in piece.img_piece_:
+        y, x = pixel.pos
+        x_coord.append(x)
+        y_coord.append(y)
+        r, g, b = pixel.color
+        color.append([b, g, r])
+
+    plt.scatter(x_coord, y_coord, c=np.array(color) / 255.0)
+    plt.show()
 
 class Puzzle():
     """
@@ -52,14 +71,22 @@ class Puzzle():
         for b_piece in border_pieces:
             if b_piece.nBorders_ == 2:
                 complete_pieces.append(b_piece)
+                show(b_piece)
                 border_pieces.remove(b_piece)
+
+                break
 
         while len(border_pieces) > 0:
             is_valid = True
             for c_piece in complete_pieces:
                 for c_edge in c_piece.edges_:
                     if not c_edge.connected:
-                        self.find_matching_piece(c_edge, border_pieces)
+                        print(c_edge.type)
+                        friend = self.find_matching_piece(c_edge, border_pieces)
+                        show(friend)
+
+
+
                         is_valid = False
                         break
                 if not is_valid:
@@ -71,10 +98,14 @@ class Puzzle():
         r_x2, r_y2 = ref_edge.shape[-1]
         r_theta = math.atan2(r_y2 - r_y1, r_x2 - r_x1)
 
+        minimum = 999999999999999999
+        minArg = None
+
         if ref_edge.type == TypeEdge.HOLE:
             for candidate_piece in candidate_pieces:
                 for edge in candidate_piece.edges_:
                     if edge.type == TypeEdge.HEAD:
+                        #===================Rotation 1=======================
                         x1, y1 = edge.shape[-1]
                         x2, y2 = edge.shape[0]
                         theta = math.atan2(y2-y1, x2-x1)
@@ -87,14 +118,9 @@ class Puzzle():
                         rotated_pixels = np.array(edge.shape)@rot_matrix
 
                         translate = np.array([r_x1-rotated_pixels[-1][0], r_y1-rotated_pixels[-1][1]])
-                        translated_pixels = rotated_pixels + translate
+                        translated_pixels1 = rotated_pixels + translate
 
-                        import matplotlib.pyplot as plt
-                        #plt.scatter(rotated_pixels[...,0],rotated_pixels[...,1], color='r')
-                        plt.scatter(translated_pixels[...,0], translated_pixels[..., 1], color='g')
-                        plt.scatter(ref_edge.shape[...,0], ref_edge.shape[..., 1], color='k')
-                        plt.show()
-
+                        #=====================Rotation 2======================
                         x1, y1 = edge.shape[0]
                         x2, y2 = edge.shape[-1]
                         theta = math.atan2(y2 - y1, x2 - x1)
@@ -107,20 +133,61 @@ class Puzzle():
                         rotated_pixels = np.array(edge.shape) @ rot_matrix
 
                         translate = np.array([r_x1 - rotated_pixels[0][0], r_y1 - rotated_pixels[0][1]])
-                        translated_pixels = rotated_pixels + translate
+                        translated_pixels2 = rotated_pixels + translate
 
-                        import matplotlib.pyplot as plt
-                        # plt.scatter(rotated_pixels[...,0],rotated_pixels[...,1], color='r')
-                        plt.scatter(translated_pixels[..., 0], translated_pixels[..., 1], color='g')
-                        plt.scatter(ref_edge.shape[..., 0], ref_edge.shape[..., 1], color='k')
-                        plt.show()
-                        # import sys
-                        # sys.exit()
+                        #======================Euclidean====================
+                        diff1 = euclidean(edge.shape, translated_pixels1)
+                        diff2 = euclidean(edge.shape, translated_pixels2)
+
+                        if min(diff1, diff2) < minimum:
+                            minimum = min(diff1, diff2)
+                            minArg = candidate_piece
+
+        else:  # ref_edge.type == TypeEdge.HEAD:
+            for candidate_piece in candidate_pieces:
+                for edge in candidate_piece.edges_:
+                    if edge.type == TypeEdge.HOLE:
+                        # ===================Rotation 1=======================
+                        x1, y1 = edge.shape[-1]
+                        x2, y2 = edge.shape[0]
+                        theta = math.atan2(y2 - y1, x2 - x1)
+
+                        theta_diff = r_theta - theta
+
+                        rot_matrix = np.array([[math.cos(theta_diff), math.sin(theta_diff)],
+                                               [-math.sin(theta_diff), math.cos(theta_diff)]])
+
+                        rotated_pixels = np.array(edge.shape) @ rot_matrix
+
+                        translate = np.array([r_x1 - rotated_pixels[-1][0], r_y1 - rotated_pixels[-1][1]])
+                        translated_pixels1 = rotated_pixels + translate
+
+                        # =====================Rotation 2======================
+                        x1, y1 = edge.shape[0]
+                        x2, y2 = edge.shape[-1]
+                        theta = math.atan2(y2 - y1, x2 - x1)
+
+                        theta_diff = r_theta - theta
+
+                        rot_matrix = np.array([[math.cos(theta_diff), math.sin(theta_diff)],
+                                               [-math.sin(theta_diff), math.cos(theta_diff)]])
+
+                        rotated_pixels = np.array(edge.shape) @ rot_matrix
+
+                        translate = np.array([r_x1 - rotated_pixels[0][0], r_y1 - rotated_pixels[0][1]])
+                        translated_pixels2 = rotated_pixels + translate
+
+                        # ======================Euclidean====================
+                        diff1 = euclidean(edge.shape, translated_pixels1)
+                        diff2 = euclidean(edge.shape, translated_pixels2)
+
+                        if min(diff1, diff2) < minimum:
+                            minimum = math.min(diff1, diff2)
+                            minArg = candidate_piece
+
+        return minArg
 
 
 
 
 
-
-        if ref_edge.type == TypeEdge.HEAD:
-            self.log("HOLE")
