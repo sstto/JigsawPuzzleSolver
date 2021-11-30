@@ -56,6 +56,26 @@ def show(piece) :
     plt.scatter(x_coord, y_coord, c=np.array(color) / 255.0)
     plt.show()
 
+def findOppositeSide(piece, dir) :
+    if dir==Directions.S :
+        for edge in piece.edges_ :
+            if edge.direction == Directions.N :
+                return edge.type
+
+    elif dir == Directions.N :
+        for edge in piece.edges_ :
+            if edge.direction == Directions.S :
+                return edge.type
+    elif dir == Directions.E :
+        for edge in piece.edges_ :
+            if edge.direction == Directions.W :
+                return edge.type
+    else:  #dir == Directions.W :
+        for edge in piece.edges_ :
+            if edge.direction == Directions.E :
+                return edge.type
+
+
 class Puzzle():
     """
         Class used to store all informations about the puzzle
@@ -102,6 +122,9 @@ class Puzzle():
             for c_piece in complete_pieces:
 
                 for c_edge in c_piece.edges_:
+                    if c_piece.nBorders_ != 2 and findOppositeSide(c_piece, c_edge.direction) == TypeEdge.BORDER :
+                        continue
+
                     if not c_edge.connected:
                         print('ref')
                         show(c_piece)
@@ -112,12 +135,13 @@ class Puzzle():
                         friend.edges_[i].connected = True
                         c_edge.connected = True
                         is_valid = False
+                        border_pieces.remove(friend)
+                        complete_pieces.append(friend)
                         break
                 if not is_valid:
                     break
 
-            border_pieces.remove(friend)
-            complete_pieces.append(friend)
+
 
 
     def find_matching_piece(self, ref_edge, candidate_pieces):
