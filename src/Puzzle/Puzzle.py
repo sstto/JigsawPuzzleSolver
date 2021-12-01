@@ -22,7 +22,7 @@ def euclidean(ref, trans):
 
     idx = np.array(range(len(short)))/len(short)*len(long)
     idx = np.around(idx).astype(int)
-    min_ = np.sum(np.sqrt(np.sum((long[idx] - short) ** 2, axis=1)))
+    min_ = np.mean(np.sqrt(np.sum((long[idx] - short) ** 2, axis=1)))
 
 
     return min_
@@ -156,9 +156,10 @@ class Puzzle():
             else:
                 border_pieces.append(piece)
 
+
         # 코너 조각 하나를 complete_pieces 에 넣기;
         for b_piece in border_pieces:
-            if b_piece.nBorders_ == 2:
+            
 
                 for pixel in b_piece.img_piece_:
                     largeBoard[pixel.pos] = pixel.color
@@ -202,7 +203,7 @@ class Puzzle():
                     break
             show(largeBoard, minX, minY, maxX, maxY)
 
-    def find_matching_piece(self, ref_edge, candidate_pieces):
+    def find_matching_piece(self, ref_edge, candidate_pieces, euclideanNum=3):
         r_x1, r_y1 = ref_edge.shape[0]
         r_x2, r_y2 = ref_edge.shape[-1]
         r_theta = math.atan2(r_y2 - r_y1, r_x2 - r_x1)
@@ -213,7 +214,11 @@ class Puzzle():
         rotAngle = None
         transpose = None
 
+        euclidean_differences_info = []
+        euclidean_differences_value = []
+
         if ref_edge.type == TypeEdge.HOLE:
+
             for candidate_piece in candidate_pieces:
                 for i, edge in enumerate(candidate_piece.edges_) :
                     color_norm = ref_edge.color_norm(edge)
@@ -227,19 +232,14 @@ class Puzzle():
                         #======================Euclidean====================
                         diff1 = euclidean(ref_edge.shape, np.flip(translated_pixels1, axis=0))
                         diff2 = euclidean(ref_edge.shape, translated_pixels2)
-                        print(min(diff1, diff2), color_norm)
 
-                        if min(diff1, diff2) < minimum:
-                            minimum = min(diff1, diff2)
-                            minArg = candidate_piece
-                            minEdge = i
-                            #print(min(diff1, diff2), color_norm)
-                            if diff1 < diff2 :
-                                rotAngle = theta_diff1
-                                transpose = translate1
-                            else :
-                                rotAngle = theta_diff2
-                                transpose = translate2
+                        if diff1<diff2 :
+                            euclidean_differences_value.append(diff1)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+                        else :
+                            euclidean_differences_value.append(diff2)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
+
 
         else:  # ref_edge.type == TypeEdge.HEAD:
             for candidate_piece in candidate_pieces:
@@ -255,21 +255,27 @@ class Puzzle():
                         # ======================Euclidean====================
                         diff1 = euclidean(ref_edge.shape, np.flip(translated_pixels1, axis=0))
                         diff2 = euclidean(ref_edge.shape, translated_pixels2)
-                        print(min(diff1, diff2), color_norm)
 
-                        if min(diff1, diff2) < minimum:
-                            minimum = min(diff1, diff2)
-                            minArg = candidate_piece
-                            minEdge = i
+                        if diff1<diff2 :
+                            euclidean_differences_value.append(diff1)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+                        else :
+                            euclidean_differences_value.append(diff2)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
 
-                            if diff1 < diff2 :
-                                rotAngle = theta_diff1
-                                transpose = translate1
-                            else :
-                                rotAngle = theta_diff2
-                                transpose = translate2
-        print("====================")
-        return minArg, minEdge, rotAngle, transpose
+        ret = None
+        print(np.sort(euclidean_differences_value))
+        topIdx = np.argsort(euclidean_differences_value)[0:euclideanNum]
+        min_ = 99999999
+        for idx in topIdx:
+            edge_idx = euclidean_differences_info[idx][1]
+            edge = euclidean_differences_info[idx][0].edges_[edge_idx]
+            color_norm = ref_edge.color_norm(edge)
+            if color_norm+euclidean_differences_value[idx]/75<min_:
+                min_ = color_norm+euclidean_differences_value[idx]/75
+                ret = euclidean_differences_info[idx]
+
+        return ret
 
 
 
