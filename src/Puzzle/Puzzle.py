@@ -252,6 +252,11 @@ class Puzzle():
                         friend.edges_[i].connected = True
                         c_edge.connected = True
                         is_valid = False
+
+                        update_dir(c_edge.direction, friend, i)
+                        friend.position = add_tuple(c_piece.position, c_edge.direction.value)
+                        grid_completed[friend.position] = friend
+
                         non_border_pieces.remove(friend)
                         complete_pieces.append(friend)
 
