@@ -42,7 +42,7 @@ def show_pyplot(piece) :
     plt.scatter(x_coord, y_coord, c=np.array(color) / 255.0)
     plt.show()
 
-def show(largeBoard, dx, dy, mx, my):
+def show(largeBoard, dx, dy, mx, my, speed):
     largeBoard = np.roll(largeBoard, [-dx, -dy], axis=(0, 1))
     largeBoard = largeBoard[0:mx-dx+100, 0:my-dy+100]
 
@@ -50,7 +50,7 @@ def show(largeBoard, dx, dy, mx, my):
     temp = cv2.imread("../result/temp.png")
     tempS = cv2.resize(temp, (720, 720))
     cv2.imshow('a', tempS)
-    cv2.waitKey(1)
+    cv2.waitKey(speed)
     cv2.destroyAllWindows()
 
 def boundary(x, y, minX, minY, maxX, maxY):
@@ -134,6 +134,128 @@ def check_duplicate(f_pos, grid) :
         if pos in grid :
             rot_dir = rotate_direction(dir, 2)
             grid[pos].edge_in_direction(rot_dir).connected = True
+
+
+def euclidean_dist_between_edges(neighbor, c_edge, candidate_pieces, euclideanNum=3) :
+
+    if c_edge.direction == Directions.N :
+        finalI = 2
+    elif c_edge.direction == Directions.E :
+        finalI = 3
+    elif c_edge.direction == Directions.S :
+        finalI = 0
+    else :
+        finalI = 1
+
+    nEdge1 = neighbor[0]
+    nEdge2 = neighbor[1]
+    nEdge3 = neighbor[2]
+    nEdge4 = neighbor[3]
+
+    if nEdge1 is not None :
+        x1_1, y1_1 = nEdge1.shape[0]
+        x2_1, y2_1 = nEdge1.shape[-1]
+        theta1 = math.atan2(y2_1 - y1_1, x2_1 - x1_1)
+        nEdge1Info = (x1_1, y1_1, theta1)
+    else :
+        nEdge1Info = None
+
+    if nEdge2 is not None :
+        x1_2, y1_2 = nEdge2.shape[0]
+        x2_2, y2_2 = nEdge2.shape[-1]
+        theta2 = math.atan2(y2_2 - y1_2, x2_2 - x1_2)
+        nEdge2Info = (x1_2, y1_2, theta2)
+    else :
+        nEdge2Info = None
+
+    if nEdge3 is not None :
+        x1_3, y1_3 = nEdge3.shape[0]
+        x2_3, y2_3 = nEdge3.shape[-1]
+        theta3 = math.atan2(y2_3 - y1_3, x2_3 - x1_3)
+        nEdge3Info = (x1_3, y1_3, theta3)
+    else:
+        nEdge3Info = None
+
+    if nEdge4 is not None :
+        x1_4, y1_4 = nEdge4.shape[0]
+        x2_4, y2_4 = nEdge4.shape[-1]
+        theta4 = math.atan2(y2_4 - y1_4, x2_4 - x1_4)
+        nEdge4Info = (x1_4, y1_4, theta4)
+    else:
+        nEdge4Info = None
+
+    nEdgeInfo = [nEdge1Info, nEdge2Info, nEdge3Info, nEdge4Info]
+
+
+    euclidean_differences_info = []
+    euclidean_differences_value = []
+
+    for c_piece in candidate_pieces :
+        minEuclidean = 999999999
+        minIdx = 0
+        minTheta = None
+        minTrans = None
+
+        for i in range(4) :
+            if  ((nEdge1 is not None) and (c_piece.edges_[i].type == nEdge1.type)) or \
+                    ((nEdge2 is not None) and (c_piece.edges_[(i+1)%4].type == nEdge2.type)) or \
+                    ((nEdge3 is not None) and (c_piece.edges_[(i+2)%4].type == nEdge3.type)) or \
+                    ((nEdge4 is not None) and (c_piece.edges_[(i+3)%4].type == nEdge4.type)) :
+                continue
+            else :
+                    total_euclidean = 0
+                    one_or_two = 1
+                    thetaTemp1 = None
+                    thetaTemp2 = None
+                    transTemp1 = None
+                    transTemp2 = None
+
+                    for idx, nEdge in enumerate(neighbor) :
+                        if nEdge is None :
+                            continue
+
+                        x, y, theta = nEdgeInfo[idx]
+                        edge = c_piece.edges_[(i+idx)%4]
+
+                        translated_pixels1, theta_diff1, translate1 = rotateEdgePixels(x, y, theta, edge, -1)
+                        translated_pixels2, theta_diff2, translate2 = rotateEdgePixels(x, y, theta, edge, 0)
+
+                        diff1 = euclidean(nEdge.shape, np.flip(translated_pixels1, axis=0))
+                        diff2 = euclidean(nEdge.shape, translated_pixels2)
+                        total_euclidean += min(diff1, diff2)
+                        thetaTemp1 = theta_diff1
+                        thetaTemp2 = theta_diff2
+                        transTemp1 = translate1
+                        transTemp2 = translate2
+
+                        if diff1>diff2 :
+                            one_or_two = 2
+
+                    if total_euclidean<minEuclidean :
+                        minEuclidean = total_euclidean
+                        minIdx = i
+                        if one_or_two==1 :
+                            minTheta = thetaTemp1
+                            minTrans = transTemp1
+                        else :
+                            minTheta = thetaTemp2
+                            minTrans = transTemp2
+
+        euclidean_differences_value.append(minEuclidean)
+        euclidean_differences_info.append( (c_piece, (minIdx+finalI)%4, minTheta, minTrans) )
+
+    topIdx = np.argsort(euclidean_differences_value)[0:euclideanNum]
+    min_ = 99999999
+    for idx in topIdx:
+        edge_idx = euclidean_differences_info[idx][1]
+        edge = euclidean_differences_info[idx][0].edges_[edge_idx]
+        color_norm = c_edge.color_norm(edge)
+        if color_norm + euclidean_differences_value[idx] / 75 < min_:
+            min_ = color_norm + euclidean_differences_value[idx] / 75
+            ret = euclidean_differences_info[idx]
+
+    return ret
+
 
 class Puzzle():
     """
@@ -236,7 +358,7 @@ class Puzzle():
                         break
                 if not is_valid:
                     break
-            show(largeBoard, minX, minY, maxX, maxY)
+            show(largeBoard, minX, minY, maxX, maxY, 1)
 
 #=======================================================================================================================
 
@@ -259,9 +381,9 @@ class Puzzle():
                             else:
                                 neighbors[dir] = None
                         #NEIGHBOR CHANGE==========
+                        neighbor = list(neighbors.values())
 
-
-                        friend, i, theta, trans = self.find_matching_piece(c_edge, candidate_pieces)
+                        friend, i, theta, trans =  euclidean_dist_between_edges(neighbor, c_edge, candidate_pieces)
                         friend.edges_[i].connected = True
                         c_edge.connected = True
                         is_valid = False
@@ -290,7 +412,7 @@ class Puzzle():
                         break
                 if not is_valid:
                     break
-            show(largeBoard, minX, minY, maxX, maxY)
+            show(largeBoard, minX, minY, maxX, maxY, 0)
 
 #=======================================================================================================================
 
@@ -355,7 +477,7 @@ class Puzzle():
                             euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
 
         ret = None
-        print(np.sort(euclidean_differences_value))
+
         topIdx = np.argsort(euclidean_differences_value)[0:euclideanNum]
         min_ = 99999999
         for idx in topIdx:
