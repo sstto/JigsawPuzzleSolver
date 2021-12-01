@@ -56,7 +56,8 @@ def show_pyplot(piece) :
     plt.scatter(x_coord, y_coord, c=np.array(color) / 255.0)
     plt.show()
 
-def show(largeBoard):
+def show(largeBoard, dx, dy):
+    largeBoard = np.roll(largeBoard, [-dx, -dy], axis=(0, 1))
 
     cv2.imwrite("../result/temp.png", largeBoard)
     temp = cv2.imread("../result/temp.png")
@@ -136,6 +137,8 @@ class Puzzle():
         non_border_pieces = []
         complete_pieces = []
         largeBoard = np.ones((3000, 3000, 3)) * 255
+        minX = 2999
+        minY = 2999
 
 
         # 분류 작업;
@@ -180,11 +183,17 @@ class Puzzle():
 
                         for pixel in friend.img_piece_:
                             pixel.pos = rot_matrix@pixel.pos
-                            largeBoard[ int(pixel.pos[0]+trans[1]),int(pixel.pos[1]+trans[0])] = pixel.color
+                            x = int(pixel.pos[0] + trans[1])
+                            y = int(pixel.pos[1] + trans[0])
+                            if x < minX:
+                                minX = x
+                            if y < minY:
+                                minY = y
+                            largeBoard[x][y] = pixel.color
                         break
                 if not is_valid:
                     break
-            show(largeBoard)
+            show(largeBoard, minX, minY)
 
     def find_matching_piece(self, ref_edge, candidate_pieces):
         r_x1, r_y1 = ref_edge.shape[0]
