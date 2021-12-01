@@ -42,8 +42,9 @@ def show_pyplot(piece) :
     plt.scatter(x_coord, y_coord, c=np.array(color) / 255.0)
     plt.show()
 
-def show(largeBoard, dx, dy):
+def show(largeBoard, dx, dy, mx, my):
     largeBoard = np.roll(largeBoard, [-dx, -dy], axis=(0, 1))
+    largeBoard = largeBoard[0:mx-dx+100, 0:my-dy+100]
 
     cv2.imwrite("../result/temp.png", largeBoard)
     temp = cv2.imread("../result/temp.png")
@@ -51,6 +52,17 @@ def show(largeBoard, dx, dy):
     cv2.imshow('a', tempS)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+
+def boundary(x, y, minX, minY, maxX, maxY):
+    if x < minX:
+        minX = x
+    if y < minY:
+        minY = y
+    if x > maxX:
+        maxX = x
+    if y > maxY:
+        maxY = y
+    return minX, minY, maxX, maxY
 
 
 def findOppositeSide(piece, dir) :
@@ -134,7 +146,8 @@ class Puzzle():
         largeBoard = np.ones((3000, 3000, 3)) * 255
         minX = 2999
         minY = 2999
-
+        maxX = 0
+        maxY = 0
 
         # 분류 작업;
         for piece in self.pieces_:
@@ -147,8 +160,9 @@ class Puzzle():
         for b_piece in border_pieces:
             if b_piece.nBorders_ == 2:
 
-                for pixel in b_piece.img_piece_ :
+                for pixel in b_piece.img_piece_:
                     largeBoard[pixel.pos] = pixel.color
+                    minX, minY, maxX, maxY = boundary(pixel.pos[0], pixel.pos[1], minX, minY, maxX, maxY)
 
                 complete_pieces.append(b_piece)
                 border_pieces.remove(b_piece)
@@ -181,15 +195,12 @@ class Puzzle():
                             pixel.pos = rot_matrix@pixel.pos
                             x = int(pixel.pos[0] + trans[1])
                             y = int(pixel.pos[1] + trans[0])
-                            if x < minX:
-                                minX = x
-                            if y < minY:
-                                minY = y
+                            minX, minY, maxX, maxY = boundary(x, y, minX, minY, maxX, maxY)
                             largeBoard[x][y] = pixel.color
                         break
                 if not is_valid:
                     break
-            show(largeBoard, minX, minY)
+            show(largeBoard, minX, minY, maxX, maxY)
 
     def find_matching_piece(self, ref_edge, candidate_pieces):
         r_x1, r_y1 = ref_edge.shape[0]

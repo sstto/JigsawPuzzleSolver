@@ -18,7 +18,6 @@ class PuzzlePiece():
         self.nBorders_ = self.number_of_border()
         self.type = TypePiece(self.nBorders_)
 
-
     def get_image_matrix(self):
         pixels_pos_color = []
         for img_piece in self.img_piece_:
