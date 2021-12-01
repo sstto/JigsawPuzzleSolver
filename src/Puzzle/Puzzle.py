@@ -50,7 +50,7 @@ def show(largeBoard, dx, dy, mx, my):
     temp = cv2.imread("../result/temp.png")
     tempS = cv2.resize(temp, (720, 720))
     cv2.imshow('a', tempS)
-    cv2.waitKey(0)
+    cv2.waitKey(1)
     cv2.destroyAllWindows()
 
 def boundary(x, y, minX, minY, maxX, maxY):
@@ -243,11 +243,24 @@ class Puzzle():
         while len(non_border_pieces) > 0:
             is_valid = True
             for c_piece in complete_pieces:
-
                 for c_edge in c_piece.edges_:
-
                     if not c_edge.connected:
-                        candidate_pieces = self.get_candidate_by_length(c_edge, non_border_pieces, 3)
+                        candidate_pieces = self.get_candidate_by_length(c_edge, non_border_pieces, 5)
+                        #NEIGHBOR CHANGE==========
+                        neighbors = dict()
+                        target_position = add_tuple(c_piece.position, c_edge.direction.value)
+
+                        for dir in directions:
+                            pos = add_tuple(target_position, dir.value)
+                            if pos in grid_completed:
+                                op_dir = rotate_direction(dir, 2)
+                                tmp = grid_completed[pos].edge_in_direction(op_dir)
+                                neighbors[dir] = tmp
+                            else:
+                                neighbors[dir] = None
+                        #NEIGHBOR CHANGE==========
+
+
                         friend, i, theta, trans = self.find_matching_piece(c_edge, candidate_pieces)
                         friend.edges_[i].connected = True
                         c_edge.connected = True
