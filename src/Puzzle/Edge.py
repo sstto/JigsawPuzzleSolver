@@ -21,6 +21,24 @@ class Edge:
         shape =np.array(self.shape)
         return np.sum(np.sqrt(np.sum(np.diff(shape, axis=0)**2, axis=1)))
 
+
+    def color_norm(self, other):
+        if len(self.color) > len(other.color):
+            short = other.color
+            long = self.color
+        else:
+            short = self.color
+            long = other.color
+
+        idx = np.array(range(len(short))) / len(short) * len(long)
+        idx = np.around(idx).astype(int)
+        diff1 = np.abs(np.array(long)[idx] - np.array(short))
+        diff1 = np.mean(diff1)
+
+        diff2 = np.abs(np.array(long)[np.flip(idx)]-np.array(short))
+        diff2 = np.mean(diff2)
+        return min(diff1, diff2)
+
     def is_border(self, threshold):
         """
             Fast check to determine of the edge is a border.
