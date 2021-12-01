@@ -128,12 +128,17 @@ def update_dir(ref_edge_dir, friend, i) :
             rotateUpdate(friend, 1)
     return
 
-def check_duplicate(f_pos, grid) :
+def check_duplicate(friend, f_pos, grid) :
     for dir in directions :
         pos = add_tuple(f_pos, dir.value)
         if pos in grid :
             rot_dir = rotate_direction(dir, 2)
             grid[pos].edge_in_direction(rot_dir).connected = True
+
+            for f_ed in friend.edges_ :
+                if f_ed.direction.value == dir.value:
+                    f_ed.connected = True
+                    break
 
 
 def euclidean_dist_between_edges(neighbor, c_edge, candidate_pieces, euclideanNum=3) :
@@ -189,6 +194,7 @@ def euclidean_dist_between_edges(neighbor, c_edge, candidate_pieces, euclideanNu
 
     euclidean_differences_info = []
     euclidean_differences_value = []
+    ret = None
 
     for c_piece in candidate_pieces :
         minEuclidean = 999999999
@@ -333,6 +339,9 @@ class Puzzle():
                         candidate_pieces = self.get_candidate_by_length(c_edge, border_pieces, 3)
                         friend, i, theta, trans = self.find_matching_piece(c_edge, candidate_pieces)
                         friend.edges_[i].connected = True
+
+
+
                         c_edge.connected = True
 
                         update_dir(c_edge.direction, friend, i)
@@ -358,9 +367,17 @@ class Puzzle():
                         break
                 if not is_valid:
                     break
-            show(largeBoard, minX, minY, maxX, maxY, 1)
+            show(largeBoard, minX, minY, maxX, maxY, 0)
 
 #=======================================================================================================================
+        for piece in complete_pieces:
+            for edge in piece.edges_:
+                if not edge.connected:
+                    if piece.nBorders_ == 2:
+                        edge.connected = True
+                    else:
+                        if piece.edge_in_direction(rotate_direction(edge.direction, 2)).type != TypeEdge.BORDER:
+                            edge.connected = True
 
         while len(non_border_pieces) > 0:
             is_valid = True
@@ -408,10 +425,20 @@ class Puzzle():
                             minX, minY, maxX, maxY = boundary(x, y, minX, minY, maxX, maxY)
                             largeBoard[x][y] = pixel.color
 
-                        check_duplicate(friend.position, grid_completed)
+                        check_duplicate(friend, friend.position, grid_completed)
                         break
                 if not is_valid:
                     break
+            '''
+            for k, v in grid_completed.items() :
+                print('grid: ', k, )
+                for edge in v.edges_ :
+                    print('dir: ', edge.direction, 'connected?:' , edge.connected)
+
+                print('\n')
+            '''
+
+
             show(largeBoard, minX, minY, maxX, maxY, 0)
 
 #=======================================================================================================================
