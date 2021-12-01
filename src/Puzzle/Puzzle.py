@@ -108,6 +108,33 @@ def rotateEdgePixels(r_x, r_y, r_theta, edge, task):
     return translated_pixels, theta_diff, translate
 
 
+def rotateUpdate(friend, n) :
+    for edge in friend.edges_ :
+        edge.direction = rotate_direction(edge.direction, n)
+
+def update_dir(ref_edge_dir, friend, i) :
+    fr_edge_dir = friend.edges_[i].direction
+
+    rot = np.array([[0, -1],[1, 0]])
+    if add_tuple(ref_edge_dir.value, fr_edge_dir.value)==(0,0):
+        return
+    elif sub_tuple(ref_edge_dir.value, fr_edge_dir.value)==(0,0):
+        rotateUpdate(friend, 2)
+    else :
+        rot_ref_edge_dir = tuple(rot@np.array(ref_edge_dir.value))
+        if sub_tuple(rot_ref_edge_dir, fr_edge_dir.value)==(0,0) :
+             rotateUpdate(friend, 3)
+        else:
+            rotateUpdate(friend, 1)
+    return
+
+def check_duplicate(f_pos, grid) :
+    for dir in directions :
+        pos = add_tuple(f_pos, dir.value)
+        if pos in grid :
+            rot_dir = rotate_direction(dir, 2)
+            grid[pos].edge_in_direction(rot_dir).connected = True
+
 class Puzzle():
     """
         Class used to store all informations about the puzzle
@@ -156,18 +183,21 @@ class Puzzle():
             else:
                 border_pieces.append(piece)
 
+        grid_completed = dict()
 
         # 코너 조각 하나를 complete_pieces 에 넣기;
         for b_piece in border_pieces:
-            
+            grid_completed[b_piece.position] = b_piece
+            for pixel in b_piece.img_piece_:
+                largeBoard[pixel.pos] = pixel.color
 
-                for pixel in b_piece.img_piece_:
-                    largeBoard[pixel.pos] = pixel.color
-                    minX, minY, maxX, maxY = boundary(pixel.pos[0], pixel.pos[1], minX, minY, maxX, maxY)
+                minX, minY, maxX, maxY = boundary(pixel.pos[0], pixel.pos[1], minX, minY, maxX, maxY)
 
-                complete_pieces.append(b_piece)
-                border_pieces.remove(b_piece)
-                break
+            complete_pieces.append(b_piece)
+            border_pieces.remove(b_piece)
+            break
+
+
 
         while len(border_pieces) > 0:
             is_valid = True
@@ -182,6 +212,11 @@ class Puzzle():
                         friend, i, theta, trans = self.find_matching_piece(c_edge, candidate_pieces)
                         friend.edges_[i].connected = True
                         c_edge.connected = True
+
+                        update_dir(c_edge.direction, friend, i)
+                        friend.position = add_tuple(c_piece.position, c_edge.direction.value)
+                        grid_completed[friend.position] = friend
+
                         is_valid = False
                         border_pieces.remove(friend)
                         complete_pieces.append(friend)
@@ -202,6 +237,44 @@ class Puzzle():
                 if not is_valid:
                     break
             show(largeBoard, minX, minY, maxX, maxY)
+
+#=======================================================================================================================
+
+        while len(non_border_pieces) > 0:
+            is_valid = True
+            for c_piece in complete_pieces:
+
+                for c_edge in c_piece.edges_:
+
+                    if not c_edge.connected:
+                        candidate_pieces = self.get_candidate_by_length(c_edge, non_border_pieces, 3)
+                        friend, i, theta, trans = self.find_matching_piece(c_edge, candidate_pieces)
+                        friend.edges_[i].connected = True
+                        c_edge.connected = True
+                        is_valid = False
+                        non_border_pieces.remove(friend)
+                        complete_pieces.append(friend)
+
+                        rot_matrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+
+                        for edge in friend.edges_ :
+                            edge.shape = edge.shape@rot_matrix
+                            edge.shape = edge.shape + trans
+
+                        for pixel in friend.img_piece_:
+                            pixel.pos = rot_matrix@pixel.pos
+                            x = int(pixel.pos[0] + trans[1])
+                            y = int(pixel.pos[1] + trans[0])
+                            minX, minY, maxX, maxY = boundary(x, y, minX, minY, maxX, maxY)
+                            largeBoard[x][y] = pixel.color
+
+                        check_duplicate(friend.position, grid_completed)
+                        break
+                if not is_valid:
+                    break
+            show(largeBoard, minX, minY, maxX, maxY)
+
+#=======================================================================================================================
 
     def find_matching_piece(self, ref_edge, candidate_pieces, euclideanNum=3):
         r_x1, r_y1 = ref_edge.shape[0]
