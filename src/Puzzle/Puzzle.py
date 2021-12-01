@@ -41,7 +41,7 @@ def euclidean(ref, trans):
 
     return min(min1, min2) # overhead TODO (translated pixel 은 1만)
 
-def show(piece) :
+def show_pyplot(piece) :
     x_coord = []
     y_coord = []
     color = []
@@ -55,6 +55,16 @@ def show(piece) :
 
     plt.scatter(x_coord, y_coord, c=np.array(color) / 255.0)
     plt.show()
+
+def show(largeBoard):
+
+    cv2.imwrite("../result/temp.png", largeBoard)
+    temp = cv2.imread("../result/temp.png")
+    tempS = cv2.resize(temp, (720, 720))
+    cv2.imshow('a', tempS)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
 
 def findOppositeSide(piece, dir) :
     if dir==Directions.S :
@@ -102,6 +112,8 @@ class Puzzle():
         border_pieces = []
         non_border_pieces = []
         complete_pieces = []
+        largeBoard = np.ones((3000, 3000, 3)) * 255
+
 
         # 분류 작업;
         for piece in self.pieces_:
@@ -113,6 +125,10 @@ class Puzzle():
         # 코너 조각 하나를 complete_pieces 에 넣기;
         for b_piece in border_pieces:
             if b_piece.nBorders_ == 2:
+
+                for pixel in b_piece.img_piece_ :
+                    largeBoard[pixel.pos] = pixel.color
+
                 complete_pieces.append(b_piece)
                 border_pieces.remove(b_piece)
                 break
@@ -126,23 +142,26 @@ class Puzzle():
                         continue
 
                     if not c_edge.connected:
-                        print('ref')
-                        show(c_piece)
-
-                        friend, i = self.find_matching_piece(c_edge, border_pieces)
-                        print('friend')
-                        show(friend)
+                        friend, i, theta, trans = self.find_matching_piece(c_edge, border_pieces)
                         friend.edges_[i].connected = True
                         c_edge.connected = True
                         is_valid = False
                         border_pieces.remove(friend)
                         complete_pieces.append(friend)
+
+                        rot_matrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+
+                        for edge in friend.edges_ :
+                            edge.shape = edge.shape@rot_matrix
+                            edge.shape = edge.shape + trans
+
+                        for pixel in friend.img_piece_:
+                            pixel.pos = rot_matrix@pixel.pos
+                            largeBoard[ int(pixel.pos[0]+trans[1]),int(pixel.pos[1]+trans[0])] = pixel.color
                         break
                 if not is_valid:
                     break
-
-
-
+            show(largeBoard)
 
     def find_matching_piece(self, ref_edge, candidate_pieces):
         r_x1, r_y1 = ref_edge.shape[0]
@@ -152,6 +171,8 @@ class Puzzle():
         minimum = 9999999999
         minArg = None
         minEdge = None
+        rotAngle = None
+        transpose = None
 
         if ref_edge.type == TypeEdge.HOLE:
             for candidate_piece in candidate_pieces:
@@ -162,30 +183,30 @@ class Puzzle():
                         x2, y2 = edge.shape[0]
                         theta = math.atan2(y2-y1, x2-x1)
 
-                        theta_diff = r_theta - theta
+                        theta_diff1 = r_theta - theta
 
-                        rot_matrix = np.array([[math.cos(theta_diff), math.sin(theta_diff)],
-                                               [-math.sin(theta_diff), math.cos(theta_diff)]])
+                        rot_matrix = np.array([[math.cos(theta_diff1), math.sin(theta_diff1)],
+                                               [-math.sin(theta_diff1), math.cos(theta_diff1)]])
 
-                        rotated_pixels = np.array(edge.shape)@rot_matrix
+                        rotated_pixels1 = np.array(edge.shape)@rot_matrix
 
-                        translate = np.array([r_x1-rotated_pixels[-1][0], r_y1-rotated_pixels[-1][1]])
-                        translated_pixels1 = rotated_pixels + translate
+                        translate1 = np.array([r_x1-rotated_pixels1[-1][0], r_y1-rotated_pixels1[-1][1]])
+                        translated_pixels1 = rotated_pixels1 + translate1
 
                         #=====================Rotation 2======================
                         x1, y1 = edge.shape[0]
                         x2, y2 = edge.shape[-1]
                         theta = math.atan2(y2 - y1, x2 - x1)
 
-                        theta_diff = r_theta - theta
+                        theta_diff2 = r_theta - theta
 
-                        rot_matrix = np.array([[math.cos(theta_diff), math.sin(theta_diff)],
-                                               [-math.sin(theta_diff), math.cos(theta_diff)]])
+                        rot_matrix = np.array([[math.cos(theta_diff2), math.sin(theta_diff2)],
+                                               [-math.sin(theta_diff2), math.cos(theta_diff2)]])
 
-                        rotated_pixels = np.array(edge.shape) @ rot_matrix
+                        rotated_pixels2 = np.array(edge.shape) @ rot_matrix
 
-                        translate = np.array([r_x1 - rotated_pixels[0][0], r_y1 - rotated_pixels[0][1]])
-                        translated_pixels2 = rotated_pixels + translate
+                        translate2 = np.array([r_x1 - rotated_pixels2[0][0], r_y1 - rotated_pixels2[0][1]])
+                        translated_pixels2 = rotated_pixels2 + translate2
 
                         #======================Euclidean====================
                         diff1 = euclidean(ref_edge.shape, translated_pixels1)
@@ -195,6 +216,12 @@ class Puzzle():
                             minimum = min(diff1, diff2)
                             minArg = candidate_piece
                             minEdge = i
+                            if diff1 < diff2 :
+                                rotAngle = theta_diff1
+                                transpose = translate1
+                            else :
+                                rotAngle = theta_diff2
+                                transpose = translate2
 
         else:  # ref_edge.type == TypeEdge.HEAD:
             for candidate_piece in candidate_pieces:
@@ -205,30 +232,30 @@ class Puzzle():
                         x2, y2 = edge.shape[0]
                         theta = math.atan2(y2 - y1, x2 - x1)
 
-                        theta_diff = r_theta - theta
+                        theta_diff1 = r_theta - theta
 
-                        rot_matrix = np.array([[math.cos(theta_diff), math.sin(theta_diff)],
-                                               [-math.sin(theta_diff), math.cos(theta_diff)]])
+                        rot_matrix = np.array([[math.cos(theta_diff1), math.sin(theta_diff1)],
+                                               [-math.sin(theta_diff1), math.cos(theta_diff1)]])
 
-                        rotated_pixels = np.array(edge.shape) @ rot_matrix
+                        rotated_pixels1 = np.array(edge.shape) @ rot_matrix
 
-                        translate = np.array([r_x1 - rotated_pixels[-1][0], r_y1 - rotated_pixels[-1][1]])
-                        translated_pixels1 = rotated_pixels + translate
+                        translate1 = np.array([r_x1 - rotated_pixels1[-1][0], r_y1 - rotated_pixels1[-1][1]])
+                        translated_pixels1 = rotated_pixels1 + translate1
 
                         # =====================Rotation 2======================
                         x1, y1 = edge.shape[0]
                         x2, y2 = edge.shape[-1]
                         theta = math.atan2(y2 - y1, x2 - x1)
 
-                        theta_diff = r_theta - theta
+                        theta_diff2 = r_theta - theta
 
-                        rot_matrix = np.array([[math.cos(theta_diff), math.sin(theta_diff)],
-                                               [-math.sin(theta_diff), math.cos(theta_diff)]])
+                        rot_matrix = np.array([[math.cos(theta_diff2), math.sin(theta_diff2)],
+                                               [-math.sin(theta_diff2), math.cos(theta_diff2)]])
 
-                        rotated_pixels = np.array(edge.shape) @ rot_matrix
+                        rotated_pixels2 = np.array(edge.shape) @ rot_matrix
 
-                        translate = np.array([r_x1 - rotated_pixels[0][0], r_y1 - rotated_pixels[0][1]])
-                        translated_pixels2 = rotated_pixels + translate
+                        translate2 = np.array([r_x1 - rotated_pixels2[0][0], r_y1 - rotated_pixels2[0][1]])
+                        translated_pixels2 = rotated_pixels2 + translate2
 
                         # ======================Euclidean====================
                         diff1 = euclidean(ref_edge.shape, translated_pixels1)
@@ -238,8 +265,14 @@ class Puzzle():
                             minimum = min(diff1, diff2)
                             minArg = candidate_piece
                             minEdge = i
+                            if diff1 < diff2 :
+                                rotAngle = theta_diff1
+                                transpose = translate1
+                            else :
+                                rotAngle = theta_diff2
+                                transpose = translate2
 
-        return minArg, minEdge
+        return minArg, minEdge, rotAngle, transpose
 
 
 
