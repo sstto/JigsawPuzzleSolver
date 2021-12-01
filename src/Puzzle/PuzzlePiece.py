@@ -14,8 +14,16 @@ class PuzzlePiece():
         self.position = (0, 0)
         self.edges_ = edges
         self.img_piece_ = img_piece  # List of Pixels
+        self.img_piece_matrix = self.get_image_matrix()
         self.nBorders_ = self.number_of_border()
         self.type = TypePiece(self.nBorders_)
+
+
+    def get_image_matrix(self):
+        pixels_pos_color = []
+        for img_piece in self.img_piece_:
+            pixels_pos_color.append(np.concatenate((np.asarray(img_piece.pos),np.array(img_piece.color))))
+        return np.array(pixels_pos_color)
 
     def number_of_border(self):
         """ Fast computations of the nunmber of borders """

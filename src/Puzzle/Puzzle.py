@@ -13,7 +13,6 @@ from Puzzle.tuple_helper import equals_tuple, add_tuple, sub_tuple, is_neigbhor,
 
 
 def euclidean(ref, trans):
-    min1=0
     if len(ref) > len(trans):
         short = trans
         long = ref
@@ -23,23 +22,10 @@ def euclidean(ref, trans):
 
     idx = np.array(range(len(short)))/len(short)*len(long)
     idx = np.around(idx).astype(int)
-    min1 = np.sum(np.sqrt(np.sum((long[idx] - short) ** 2, axis=1)))
+    min_ = np.sum(np.sqrt(np.sum((long[idx] - short) ** 2, axis=1)))
 
 
-    trans = np.flip(trans, axis=0)
-    min2 = 0
-    if len(ref) > len(trans):
-        short = trans
-        long = ref
-    else:
-        short = ref
-        long = trans
-
-    idx = np.array(range(len(short))) / len(short) * len(long)
-    idx = np.around(idx).astype(int)
-    min2 = np.sum(np.sqrt(np.sum((long[idx] - short) ** 2, axis=1)))
-
-    return min(min1, min2) # overhead TODO (translated pixel 은 1만)
+    return min_
 
 def show_pyplot(piece) :
     x_coord = []
@@ -119,6 +105,15 @@ class Puzzle():
         """ Helper to log informations to the GUI """
         print(' '.join(map(str, args)))
 
+    def get_candidate_by_length(self, ref_edge, pieces, candidate_num=10):
+        diff = np.zeros((len(pieces), len(pieces[0].edges_)))
+        for i, piece in enumerate(pieces):
+            for j, edge in enumerate(piece.edges_):
+                diff[i, j] = abs(ref_edge.length - edge.length)
+        diff = np.sort(diff, axis =1)[:, 0]
+        idx = np.argsort(diff).astype(int)[:candidate_num] if candidate_num>len(pieces) else np.argsort(diff).astype(int)[:]
+        return np.array(pieces)[idx]
+
     def __init__(self, path):
         """ Extract informations of pieces in the img at `path` and start computation of the solution """
 
@@ -168,7 +163,8 @@ class Puzzle():
                         continue
 
                     if not c_edge.connected:
-                        friend, i, theta, trans = self.find_matching_piece(c_edge, border_pieces)
+                        candidate_pieces = self.get_candidate_by_length(c_edge, border_pieces, 3)
+                        friend, i, theta, trans = self.find_matching_piece(c_edge, candidate_pieces)
                         friend.edges_[i].connected = True
                         c_edge.connected = True
                         is_valid = False
@@ -217,7 +213,7 @@ class Puzzle():
                         translated_pixels2, theta_diff2, translate2 = rotateEdgePixels(r_x1, r_y1, r_theta, edge, 0)
 
                         #======================Euclidean====================
-                        diff1 = euclidean(ref_edge.shape, translated_pixels1)
+                        diff1 = euclidean(ref_edge.shape, np.flip(translated_pixels1, axis=0))
                         diff2 = euclidean(ref_edge.shape, translated_pixels2)
 
                         if min(diff1, diff2) < minimum:
@@ -242,7 +238,7 @@ class Puzzle():
                         translated_pixels2, theta_diff2, translate2 = rotateEdgePixels(r_x1, r_y1, r_theta, edge, 0)
 
                         # ======================Euclidean====================
-                        diff1 = euclidean(ref_edge.shape, translated_pixels1)
+                        diff1 = euclidean(ref_edge.shape, np.flip(translated_pixels1, axis=0))
                         diff2 = euclidean(ref_edge.shape, translated_pixels2)
 
                         if min(diff1, diff2) < minimum:
