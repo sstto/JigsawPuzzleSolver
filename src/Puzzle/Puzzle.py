@@ -141,7 +141,40 @@ def get_candidate_by_length(ref_edge, pieces, candidate_num=10):
         if candidate_num > len(pieces) else np.argsort(diff).astype(int)[:]
     return np.array(pieces)[idx]
 
+#+==============================================================
+#Updated to align the first piece
+def get_info_align_to_axis(piece : PuzzlePiece):
+    border_edge = None
+    for edge in piece.edges_:
+        if edge.type == TypeEdge.BORDER:
+            border_edge = edge
 
+    r_x1, r_y1 = 1,2
+    r_x2, r_y2 = 1,1
+    r_theta = math.atan2(r_y2 - r_y1, r_x2 - r_x1)
+    _, theta, trans = rotate_edge_pixels(r_x1, r_y1, r_theta, edge=border_edge, task=0)
+    return theta, trans
+
+def rotate_translate_color(piece, theta, trans, largeBoard, boundaries = None):
+    # rotate, translate and color
+    rot_matrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+    for edge in piece.edges_:
+        edge.shape = edge.shape @ rot_matrix
+        edge.shape = edge.shape + trans
+    if boundaries is None :
+        x_size, y_size, _ = largeBoard.shape
+        minX, minY, maxX, maxY  = x_size -1, y_size-1, 0, 0
+    else :
+        (minX, minY, maxX, maxY) = boundaries
+    for pixel in piece.img_piece_:
+        pixel.pos = rot_matrix @ pixel.pos
+        x = int(pixel.pos[0] + trans[1])
+        y = int(pixel.pos[1] + trans[0])
+
+        minX, minY, maxX, maxY = boundary(x, y, minX, minY, maxX, maxY)
+        largeBoard[x][y] = pixel.color
+    return minX, minY, maxX, maxY
+#=========================================================================
 class Puzzle:
     def __init__(self, path):
         self.pieces_ = None
@@ -176,10 +209,9 @@ class Puzzle:
         # 코너 조각 하나를 complete_pieces 에 넣기;
         for b_piece in border_pieces:
             grid_completed[b_piece.position] = b_piece
-            for pixel in b_piece.img_piece_:
-                largeBoard[pixel.pos] = pixel.color
 
-                minX, minY, maxX, maxY = boundary(pixel.pos[0], pixel.pos[1], minX, minY, maxX, maxY)
+            theta, trans = get_info_align_to_axis(b_piece)
+            minX, minY, maxX, maxY = rotate_translate_color(b_piece, theta, trans, largeBoard)
 
             complete_pieces.append(b_piece)
             border_pieces.remove(b_piece)
