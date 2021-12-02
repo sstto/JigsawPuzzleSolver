@@ -191,7 +191,7 @@ class Puzzle:
         border_pieces = []
         non_border_pieces = []
         complete_pieces = []
-        largeBoard = np.ones((3000, 3000, 3)) * 255
+        largeBoard = np.ones((13000, 13000, 3)) * 255
         minX = 2999
         minY = 2999
         maxX = 0
@@ -359,9 +359,16 @@ def find_matching_piece(ref_piece, ref_edge, candidate_pieces, euclidean_num=3):
                 diff1 = diff2
 
             update_dir(ref_edge.direction, candidate_piece, i)
-            if ref_piece.nBorders_ !=2 and ref_piece.is_border_aligned(candidate_piece) or ref_piece.nBorders_== 2:
+            if (ref_piece.nBorders_ !=2 and ref_piece.is_border_aligned(candidate_piece)):
+                _, theta_diff, _ = ref_piece.border_angle(candidate_piece, task =0)
+                _, border_theta_diff = divmod(theta_diff - theta_diff1, np.pi)
+                if abs(border_theta_diff)<0.05 or np.pi - abs(border_theta_diff)< 0.05:
+                    euclidean_differences_value.append(diff1)
+                    euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+            elif  ref_piece.nBorders_== 2:
                 euclidean_differences_value.append(diff1)
                 euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+
             update_dir(rollback_direction,  candidate_piece, i)
     ret = None
 
