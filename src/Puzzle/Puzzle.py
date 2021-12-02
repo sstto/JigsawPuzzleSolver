@@ -371,9 +371,8 @@ def find_matching_piece(ref_piece, ref_edge, candidate_pieces, euclidean_num=3):
                             euclidean_differences_value.append(diff2)
                             euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
                         elif ref_piece.nBorders_ == 2:
-
-                            euclidean_differences_value.append(diff1)
-                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+                            euclidean_differences_value.append(diff2)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
                         update_dir(rollback_direction, candidate_piece, i)
 
     # ref_edge.type == TypeEdge.HEAD:
@@ -410,8 +409,8 @@ def find_matching_piece(ref_piece, ref_edge, candidate_pieces, euclidean_num=3):
                             euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
                         elif ref_piece.nBorders_ == 2:
 
-                            euclidean_differences_value.append(diff1)
-                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+                            euclidean_differences_value.append(diff2)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
                         update_dir(rollback_direction, candidate_piece, i)
 
 
