@@ -1,10 +1,10 @@
 import numpy as np
-
 from Puzzle.Enums import directions, Directions, TypeEdge, TypePiece, rotate_direction
 
-class PuzzlePiece():
+
+class PuzzlePiece:
     """
-        Wrapper used to store informations about pieces of the puzzle.
+        Wrapper used to store information about pieces of the puzzle.
         Contains the position of the piece in the puzzle graph, a list of edges,
         the list of pixels composing the piece, the number of borders and the type
         of the piece.
@@ -17,9 +17,8 @@ class PuzzlePiece():
         self.nBorders_ = self.number_of_border()
         self.type = TypePiece(self.nBorders_)
 
-
     def number_of_border(self):
-        """ Fast computations of the nunmber of borders """
+        """ Fast computations of the number of borders """
 
         return len(list(filter(lambda x: x.type == TypeEdge.BORDER, self.edges_)))
 

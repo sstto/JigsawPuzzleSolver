@@ -131,6 +131,174 @@ def check_duplicate(friend, f_pos, grid):
                     break
 
 
+def get_candidate_by_length(ref_edge, pieces, candidate_num=10):
+    diff = np.zeros((len(pieces), len(pieces[0].edges_)))
+    for i, piece in enumerate(pieces):
+        for j, edge in enumerate(piece.edges_):
+            diff[i, j] = abs(ref_edge.length - edge.length)
+    diff = np.sort(diff, axis=1)[:, 0]
+    idx = np.argsort(diff).astype(int)[:candidate_num] \
+        if candidate_num > len(pieces) else np.argsort(diff).astype(int)[:]
+    return np.array(pieces)[idx]
+
+
+class Puzzle:
+    def __init__(self, path):
+        self.pieces_ = None
+        factor = 0.40
+        while self.pieces_ is None:
+            factor += 0.01
+            self.extract = Extractor(path, factor)
+            self.pieces_ = self.extract.extract()
+
+        # 조각을 세 가지로 나눈다.;
+        # 1. border_pieces : 가장자리 조각 배열;
+        # 2. non_border_pieces : 가장자리 아닌 조각열 배열;
+        # 3. complete_pieces : 위치를 정한 조각열 배열;
+        border_pieces = []
+        non_border_pieces = []
+        complete_pieces = []
+        largeBoard = np.ones((3000, 3000, 3)) * 255
+        minX = 2999
+        minY = 2999
+        maxX = 0
+        maxY = 0
+
+        # 분류 작업;
+        for piece in self.pieces_:
+            if piece.nBorders_ == 0:
+                non_border_pieces.append(piece)
+            else:
+                border_pieces.append(piece)
+
+        grid_completed = dict()
+
+        # 코너 조각 하나를 complete_pieces 에 넣기;
+        for b_piece in border_pieces:
+            grid_completed[b_piece.position] = b_piece
+            for pixel in b_piece.img_piece_:
+                largeBoard[pixel.pos] = pixel.color
+
+                minX, minY, maxX, maxY = boundary(pixel.pos[0], pixel.pos[1], minX, minY, maxX, maxY)
+
+            complete_pieces.append(b_piece)
+            border_pieces.remove(b_piece)
+            break
+
+        # Border 조각 맞추기
+        while len(border_pieces) > 0:
+            is_valid = True
+            for c_piece in complete_pieces:
+
+                for c_edge in c_piece.edges_:
+                    if c_piece.nBorders_ != 2 and find_opposite_side(c_piece, c_edge.direction) == TypeEdge.BORDER:
+                        continue
+
+                    if not c_edge.connected:
+                        candidate_pieces = get_candidate_by_length(c_edge, border_pieces, 3)
+                        friend, i, theta, trans = find_matching_piece(c_edge, candidate_pieces)
+                        friend.edges_[i].connected = True
+                        c_edge.connected = True
+
+                        update_dir(c_edge.direction, friend, i)
+                        friend.position = add_tuple(c_piece.position, c_edge.direction.value)
+                        grid_completed[friend.position] = friend
+
+                        border_pieces.remove(friend)
+                        complete_pieces.append(friend)
+
+                        rot_matrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+                        for edge in friend.edges_:
+                            edge.shape = edge.shape@rot_matrix
+                            edge.shape = edge.shape + trans
+
+                        for pixel in friend.img_piece_:
+                            pixel.pos = rot_matrix@pixel.pos
+                            x = int(pixel.pos[0] + trans[1])
+                            y = int(pixel.pos[1] + trans[0])
+                            minX, minY, maxX, maxY = boundary(x, y, minX, minY, maxX, maxY)
+                            largeBoard[x][y] = pixel.color
+
+                        is_valid = False
+                        break
+                if not is_valid:
+                    break
+            show(largeBoard, minX, minY, maxX, maxY, 0)
+
+        # Border 조각 완료 후 connected 정리
+        for piece in complete_pieces:
+            for edge in piece.edges_:
+                if not edge.connected:
+                    if piece.nBorders_ == 2:
+                        edge.connected = True
+                    else:
+                        if piece.edge_in_direction(rotate_direction(edge.direction, 2)).type != TypeEdge.BORDER:
+                            edge.connected = True
+
+        # Center 조각 맞추기
+        while len(non_border_pieces) > 0:
+            is_valid = True
+            for c_piece in complete_pieces:
+                for c_edge in c_piece.edges_:
+                    if not c_edge.connected:
+                        candidate_pieces = get_candidate_by_length(c_edge, non_border_pieces, 5)
+                        #=======NEIGHBOR CHANGE==========
+                        neighbors = dict()
+                        target_position = add_tuple(c_piece.position, c_edge.direction.value)
+
+                        for dir in directions:
+                            pos = add_tuple(target_position, dir.value)
+                            if pos in grid_completed:
+                                op_dir = rotate_direction(dir, 2)
+                                tmp = grid_completed[pos].edge_in_direction(op_dir)
+                                neighbors[dir] = tmp
+                            else:
+                                neighbors[dir] = None
+                        #=======NEIGHBOR CHANGE==========
+                        neighbor = list(neighbors.values())
+                        friend, i, theta, trans = find_matching_piece_center(neighbor, c_edge, candidate_pieces)
+                        friend.edges_[i].connected = True
+                        c_edge.connected = True
+                        is_valid = False
+
+                        update_dir(c_edge.direction, friend, i)
+                        friend.position = add_tuple(c_piece.position, c_edge.direction.value)
+                        grid_completed[friend.position] = friend
+
+                        non_border_pieces.remove(friend)
+                        complete_pieces.append(friend)
+
+                        rot_matrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
+
+                        for edge in friend.edges_:
+                            edge.shape = edge.shape@rot_matrix
+                            edge.shape = edge.shape + trans
+
+                        for pixel in friend.img_piece_:
+                            pixel.pos = rot_matrix@pixel.pos
+                            x = int(pixel.pos[0] + trans[1])
+                            y = int(pixel.pos[1] + trans[0])
+                            minX, minY, maxX, maxY = boundary(x, y, minX, minY, maxX, maxY)
+                            largeBoard[x][y] = pixel.color
+
+                        check_duplicate(friend, friend.position, grid_completed)
+                        break
+                if not is_valid:
+                    break
+            '''
+            for k, v in grid_completed.items() :
+                print('grid: ', k, )
+                for edge in v.edges_ :
+                    print('dir: ', edge.direction, 'connected?:' , edge.connected)
+
+                print('\n')
+            '''
+
+            show(largeBoard, minX, minY, maxX, maxY, 0)
+
+#=======================================================================================================================
+
+
 def find_matching_piece(ref_edge, candidate_pieces, euclidean_num=3):
     r_x1, r_y1 = ref_edge.shape[0]
     r_x2, r_y2 = ref_edge.shape[-1]
@@ -196,174 +364,6 @@ def find_matching_piece(ref_edge, candidate_pieces, euclidean_num=3):
             ret = euclidean_differences_info[idx]
 
     return ret
-
-
-def get_candidate_by_length(ref_edge, pieces, candidate_num=10):
-    diff = np.zeros((len(pieces), len(pieces[0].edges_)))
-    for i, piece in enumerate(pieces):
-        for j, edge in enumerate(piece.edges_):
-            diff[i, j] = abs(ref_edge.length - edge.length)
-    diff = np.sort(diff, axis=1)[:, 0]
-    idx = np.argsort(diff).astype(int)[:candidate_num] \
-        if candidate_num > len(pieces) else np.argsort(diff).astype(int)[:]
-    return np.array(pieces)[idx]
-
-
-class Puzzle:
-    def __init__(self, path):
-        self.pieces_ = None
-        factor = 0.40
-        while self.pieces_ is None:
-            factor += 0.01
-            self.extract = Extractor(path, factor)
-            self.pieces_ = self.extract.extract()
-
-        # 조각을 세 가지로 나눈다.;
-        # 1. border_pieces : 가장자리 조각 배열;
-        # 2. non_border_pieces : 가장자리 아닌 조각열 배열;
-        # 3. complete_pieces : 위치를 정한 조각열 배열;
-        border_pieces = []
-        non_border_pieces = []
-        complete_pieces = []
-        largeBoard = np.ones((3000, 3000, 3)) * 255
-        minX = 2999
-        minY = 2999
-        maxX = 0
-        maxY = 0
-
-        # 분류 작업;
-        for piece in self.pieces_:
-            if piece.nBorders_ == 0:
-                non_border_pieces.append(piece)
-            else:
-                border_pieces.append(piece)
-
-        grid_completed = dict()
-
-        # 코너 조각 하나를 complete_pieces 에 넣기;
-        for b_piece in border_pieces:
-            grid_completed[b_piece.position] = b_piece
-            for pixel in b_piece.img_piece_:
-                largeBoard[pixel.pos] = pixel.color
-
-                minX, minY, maxX, maxY = boundary(pixel.pos[0], pixel.pos[1], minX, minY, maxX, maxY)
-
-            complete_pieces.append(b_piece)
-            border_pieces.remove(b_piece)
-            break
-
-        while len(border_pieces) > 0:
-            is_valid = True
-            for c_piece in complete_pieces:
-
-                for c_edge in c_piece.edges_:
-                    if c_piece.nBorders_ != 2 and find_opposite_side(c_piece, c_edge.direction) == TypeEdge.BORDER:
-                        continue
-
-                    if not c_edge.connected:
-                        candidate_pieces = get_candidate_by_length(c_edge, border_pieces, 3)
-                        friend, i, theta, trans = find_matching_piece(c_edge, candidate_pieces)
-                        friend.edges_[i].connected = True
-                        c_edge.connected = True
-
-                        update_dir(c_edge.direction, friend, i)
-                        friend.position = add_tuple(c_piece.position, c_edge.direction.value)
-                        grid_completed[friend.position] = friend
-
-                        border_pieces.remove(friend)
-                        complete_pieces.append(friend)
-
-                        rot_matrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-                        for edge in friend.edges_:
-                            edge.shape = edge.shape@rot_matrix
-                            edge.shape = edge.shape + trans
-
-                        for pixel in friend.img_piece_:
-                            pixel.pos = rot_matrix@pixel.pos
-                            x = int(pixel.pos[0] + trans[1])
-                            y = int(pixel.pos[1] + trans[0])
-                            minX, minY, maxX, maxY = boundary(x, y, minX, minY, maxX, maxY)
-                            largeBoard[x][y] = pixel.color
-
-                        is_valid = False
-                        break
-                if not is_valid:
-                    break
-            show(largeBoard, minX, minY, maxX, maxY, 0)
-
-#=======================================================================================================================
-        for piece in complete_pieces:
-            for edge in piece.edges_:
-                if not edge.connected:
-                    if piece.nBorders_ == 2:
-                        edge.connected = True
-                    else:
-                        if piece.edge_in_direction(rotate_direction(edge.direction, 2)).type != TypeEdge.BORDER:
-                            edge.connected = True
-
-        while len(non_border_pieces) > 0:
-            is_valid = True
-            for c_piece in complete_pieces:
-                for c_edge in c_piece.edges_:
-                    if not c_edge.connected:
-                        candidate_pieces = get_candidate_by_length(c_edge, non_border_pieces, 5)
-                        #NEIGHBOR CHANGE==========
-                        neighbors = dict()
-                        target_position = add_tuple(c_piece.position, c_edge.direction.value)
-
-                        for dir in directions:
-                            pos = add_tuple(target_position, dir.value)
-                            if pos in grid_completed:
-                                op_dir = rotate_direction(dir, 2)
-                                tmp = grid_completed[pos].edge_in_direction(op_dir)
-                                neighbors[dir] = tmp
-                            else:
-                                neighbors[dir] = None
-                        #NEIGHBOR CHANGE==========
-                        neighbor = list(neighbors.values())
-
-                        friend, i, theta, trans = find_matching_piece_center(neighbor, c_edge, candidate_pieces)
-                        friend.edges_[i].connected = True
-                        c_edge.connected = True
-                        is_valid = False
-
-                        update_dir(c_edge.direction, friend, i)
-                        friend.position = add_tuple(c_piece.position, c_edge.direction.value)
-                        grid_completed[friend.position] = friend
-
-                        non_border_pieces.remove(friend)
-                        complete_pieces.append(friend)
-
-                        rot_matrix = np.array([[np.cos(theta), np.sin(theta)], [-np.sin(theta), np.cos(theta)]])
-
-                        for edge in friend.edges_:
-                            edge.shape = edge.shape@rot_matrix
-                            edge.shape = edge.shape + trans
-
-                        for pixel in friend.img_piece_:
-                            pixel.pos = rot_matrix@pixel.pos
-                            x = int(pixel.pos[0] + trans[1])
-                            y = int(pixel.pos[1] + trans[0])
-                            minX, minY, maxX, maxY = boundary(x, y, minX, minY, maxX, maxY)
-                            largeBoard[x][y] = pixel.color
-
-                        check_duplicate(friend, friend.position, grid_completed)
-                        break
-                if not is_valid:
-                    break
-            '''
-            for k, v in grid_completed.items() :
-                print('grid: ', k, )
-                for edge in v.edges_ :
-                    print('dir: ', edge.direction, 'connected?:' , edge.connected)
-
-                print('\n')
-            '''
-
-            show(largeBoard, minX, minY, maxX, maxY, 0)
-
-#=======================================================================================================================
-
 
 #=======================================================================================================================
 

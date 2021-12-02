@@ -5,7 +5,7 @@ from Puzzle.Enums import TypeEdge, Directions
 class Edge:
     """
         Wrapper for edges.
-        Contains shape, colors, type and positions informations in the puzzle of an edge.
+        Contains shape, colors, type and positions information in the puzzle of an edge.
     """
 
     def __init__(self, shape, color, type=TypeEdge.HOLE, connected=False, direction=Directions.N):
@@ -18,9 +18,8 @@ class Edge:
         self.length = self.calculate_length()
         
     def calculate_length(self):
-        shape =np.array(self.shape)
+        shape = np.array(self.shape)
         return np.sum(np.sqrt(np.sum(np.diff(shape, axis=0)**2, axis=1)))
-
 
     def color_norm(self, other):
         if len(self.color) > len(other.color):
