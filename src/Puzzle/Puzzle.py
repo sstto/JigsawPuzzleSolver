@@ -195,8 +195,8 @@ class Puzzle:
                         continue
 
                     if not c_edge.connected:
-                        candidate_pieces = get_candidate_by_length(c_edge, border_pieces, 3)
-                        friend, i, theta, trans = find_matching_piece(c_edge, candidate_pieces)
+                        candidate_pieces = get_candidate_by_length(c_edge, border_pieces, len(border_pieces)//2)
+                        friend, i, theta, trans = find_matching_piece(c_piece, c_edge, candidate_pieces, len(candidate_pieces))
                         friend.edges_[i].connected = True
                         c_edge.connected = True
 
@@ -223,7 +223,7 @@ class Puzzle:
                         break
                 if not is_valid:
                     break
-            show(largeBoard, minX, minY, maxX, maxY, 0)
+            show(largeBoard, minX, minY, maxX, maxY, 1)
 
         # Border 조각 완료 후 connected 정리
         for piece in complete_pieces:
@@ -241,7 +241,7 @@ class Puzzle:
             for c_piece in complete_pieces:
                 for c_edge in c_piece.edges_:
                     if not c_edge.connected:
-                        candidate_pieces = get_candidate_by_length(c_edge, non_border_pieces, 5)
+                        candidate_pieces = get_candidate_by_length(c_edge, non_border_pieces,  len(non_border_pieces)//2)
                         #=======NEIGHBOR CHANGE==========
                         neighbors = dict()
                         target_position = add_tuple(c_piece.position, c_edge.direction.value)
@@ -256,7 +256,7 @@ class Puzzle:
                                 neighbors[dir] = None
                         #=======NEIGHBOR CHANGE==========
                         neighbor = list(neighbors.values())
-                        friend, i, theta, trans = find_matching_piece_center(neighbor, c_edge, candidate_pieces)
+                        friend, i, theta, trans = find_matching_piece_center(neighbor, c_edge, candidate_pieces,  len(non_border_pieces)//2+1)
                         friend.edges_[i].connected = True
                         c_edge.connected = True
                         is_valid = False
@@ -294,12 +294,12 @@ class Puzzle:
                 print('\n')
             '''
 
-            show(largeBoard, minX, minY, maxX, maxY, 0)
+            show(largeBoard, minX, minY, maxX, maxY, 1)
 
 #=======================================================================================================================
 
 
-def find_matching_piece(ref_edge, candidate_pieces, euclidean_num=3):
+def find_matching_piece(ref_piece, ref_edge, candidate_pieces, euclidean_num=3):
     r_x1, r_y1 = ref_edge.shape[0]
     r_x2, r_y2 = ref_edge.shape[-1]
     r_theta = math.atan2(r_y2 - r_y1, r_x2 - r_x1)
@@ -322,12 +322,27 @@ def find_matching_piece(ref_edge, candidate_pieces, euclidean_num=3):
                     diff1 = euclidean(ref_edge.shape, np.flip(translated_pixels1, axis=0))
                     diff2 = euclidean(ref_edge.shape, translated_pixels2)
 
+                    rollback_direction = rotate_direction(edge.direction, 2)
                     if diff1 < diff2:
-                        euclidean_differences_value.append(diff1)
-                        euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+                        update_dir(ref_edge.direction, candidate_piece, i)
+                        if ref_piece.nBorders_ !=2 and ref_piece.is_border_aligned(candidate_piece):
+                            euclidean_differences_value.append(diff1)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+                        elif ref_piece.nBorders_ == 2:
+                            euclidean_differences_value.append(diff1)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+                        update_dir(rollback_direction,  candidate_piece, i)
+
                     else:
-                        euclidean_differences_value.append(diff2)
-                        euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
+                        update_dir(ref_edge.direction,candidate_piece, i)
+                        if ref_piece.nBorders_ != 2 and ref_piece.is_border_aligned(candidate_piece):
+                            euclidean_differences_value.append(diff2)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
+                        elif ref_piece.nBorders_ == 2:
+
+                            euclidean_differences_value.append(diff1)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+                        update_dir(rollback_direction, candidate_piece, i)
 
     # ref_edge.type == TypeEdge.HEAD:
     else:
@@ -344,12 +359,29 @@ def find_matching_piece(ref_edge, candidate_pieces, euclidean_num=3):
                     diff1 = euclidean(ref_edge.shape, np.flip(translated_pixels1, axis=0))
                     diff2 = euclidean(ref_edge.shape, translated_pixels2)
 
+                    rollback_direction = rotate_direction(edge.direction, 2)
                     if diff1 < diff2:
-                        euclidean_differences_value.append(diff1)
-                        euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+                        update_dir(ref_edge.direction, candidate_piece, i)
+                        if ref_piece.nBorders_ != 2 and ref_piece.is_border_aligned(candidate_piece):
+                            euclidean_differences_value.append(diff1)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+                        elif ref_piece.nBorders_ == 2:
+
+                            euclidean_differences_value.append(diff1)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+                        update_dir(rollback_direction, candidate_piece, i)
+
                     else:
-                        euclidean_differences_value.append(diff2)
-                        euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
+                        update_dir(ref_edge.direction, candidate_piece,i)
+                        if ref_piece.nBorders_ != 2 and ref_piece.is_border_aligned(candidate_piece):
+                            euclidean_differences_value.append(diff2)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
+                        elif ref_piece.nBorders_ == 2:
+
+                            euclidean_differences_value.append(diff1)
+                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+                        update_dir(rollback_direction, candidate_piece, i)
+
 
     ret = None
 
@@ -362,7 +394,6 @@ def find_matching_piece(ref_edge, candidate_pieces, euclidean_num=3):
         if color_norm+euclidean_differences_value[idx]/75 < min_:
             min_ = color_norm+euclidean_differences_value[idx]/75
             ret = euclidean_differences_info[idx]
-
     return ret
 
 #=======================================================================================================================
