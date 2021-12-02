@@ -339,81 +339,30 @@ def find_matching_piece(ref_piece, ref_edge, candidate_pieces, euclidean_num=3):
     euclidean_differences_info = []
     euclidean_differences_value = []
 
-    if ref_edge.type == TypeEdge.HOLE:
+    for candidate_piece in candidate_pieces:
+        for i, edge in enumerate(candidate_piece.edges_):
+            if not edge.is_compatible(ref_edge):
+                continue
+            #===================Rotation 1=======================
+            translated_pixels1, theta_diff1, translate1 = rotate_edge_pixels(r_x1, r_y1, r_theta, edge, -1)
+            #=====================Rotation 2======================
+            translated_pixels2, theta_diff2, translate2 = rotate_edge_pixels(r_x1, r_y1, r_theta, edge, 0)
+            #======================Euclidean====================
+            diff1 = euclidean(ref_edge.shape, np.flip(translated_pixels1, axis=0))
+            diff2 = euclidean(ref_edge.shape, translated_pixels2)
+            rollback_direction = rotate_direction(edge.direction, 2)
+            #=====================1, 2 통합======================
+            if diff2 < diff1:
+                translated_pixels1 = translated_pixels2
+                theta_diff1 = theta_diff2
+                translate1 = translate2
+                diff1 = diff2
 
-        for candidate_piece in candidate_pieces:
-            for i, edge in enumerate(candidate_piece.edges_):
-                if edge.type == TypeEdge.HEAD:
-                    #===================Rotation 1=======================
-                    translated_pixels1, theta_diff1, translate1 = rotate_edge_pixels(r_x1, r_y1, r_theta, edge, -1)
-
-                    #=====================Rotation 2======================
-                    translated_pixels2, theta_diff2, translate2 = rotate_edge_pixels(r_x1, r_y1, r_theta, edge, 0)
-
-                    #======================Euclidean====================
-                    diff1 = euclidean(ref_edge.shape, np.flip(translated_pixels1, axis=0))
-                    diff2 = euclidean(ref_edge.shape, translated_pixels2)
-
-                    rollback_direction = rotate_direction(edge.direction, 2)
-                    if diff1 < diff2:
-                        update_dir(ref_edge.direction, candidate_piece, i)
-                        if ref_piece.nBorders_ !=2 and ref_piece.is_border_aligned(candidate_piece):
-                            euclidean_differences_value.append(diff1)
-                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
-                        elif ref_piece.nBorders_ == 2:
-                            euclidean_differences_value.append(diff1)
-                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
-                        update_dir(rollback_direction,  candidate_piece, i)
-
-                    else:
-                        update_dir(ref_edge.direction,candidate_piece, i)
-                        if ref_piece.nBorders_ != 2 and ref_piece.is_border_aligned(candidate_piece):
-                            euclidean_differences_value.append(diff2)
-                            euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
-                        elif ref_piece.nBorders_ == 2:
-                            euclidean_differences_value.append(diff2)
-                            euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
-                        update_dir(rollback_direction, candidate_piece, i)
-
-    # ref_edge.type == TypeEdge.HEAD:
-    else:
-        for candidate_piece in candidate_pieces:
-            for i, edge in enumerate(candidate_piece.edges_):
-                if edge.type == TypeEdge.HOLE:
-                    # ===================Rotation 1=======================
-                    translated_pixels1, theta_diff1, translate1 = rotate_edge_pixels(r_x1, r_y1, r_theta, edge, -1)
-
-                    # =====================Rotation 2======================
-                    translated_pixels2, theta_diff2, translate2 = rotate_edge_pixels(r_x1, r_y1, r_theta, edge, 0)
-
-                    # ======================Euclidean====================
-                    diff1 = euclidean(ref_edge.shape, np.flip(translated_pixels1, axis=0))
-                    diff2 = euclidean(ref_edge.shape, translated_pixels2)
-
-                    rollback_direction = rotate_direction(edge.direction, 2)
-                    if diff1 < diff2:
-                        update_dir(ref_edge.direction, candidate_piece, i)
-                        if ref_piece.nBorders_ != 2 and ref_piece.is_border_aligned(candidate_piece):
-                            euclidean_differences_value.append(diff1)
-                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
-                        elif ref_piece.nBorders_ == 2:
-
-                            euclidean_differences_value.append(diff1)
-                            euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
-                        update_dir(rollback_direction, candidate_piece, i)
-
-                    else:
-                        update_dir(ref_edge.direction, candidate_piece,i)
-                        if ref_piece.nBorders_ != 2 and ref_piece.is_border_aligned(candidate_piece):
-                            euclidean_differences_value.append(diff2)
-                            euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
-                        elif ref_piece.nBorders_ == 2:
-
-                            euclidean_differences_value.append(diff2)
-                            euclidean_differences_info.append((candidate_piece, i, theta_diff2, translate2))
-                        update_dir(rollback_direction, candidate_piece, i)
-
-
+            update_dir(ref_edge.direction, candidate_piece, i)
+            if ref_piece.nBorders_ !=2 and ref_piece.is_border_aligned(candidate_piece) or ref_piece.nBorders_== 2:
+                euclidean_differences_value.append(diff1)
+                euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
+            update_dir(rollback_direction,  candidate_piece, i)
     ret = None
 
     topIdx = np.argsort(euclidean_differences_value)[0:euclidean_num]
