@@ -213,7 +213,7 @@ class Puzzle:
         border_pieces = []
         non_border_pieces = []
         complete_pieces = []
-        largeBoard = np.ones((13000, 13000, 3)) * 255
+        largeBoard = np.ones((3000, 3000, 3)) * 255
         minX = 2999
         minY = 2999
         maxX = 0
@@ -251,7 +251,7 @@ class Puzzle:
                         continue
 
                     if not c_edge.connected:
-                        candidate_pieces = get_candidate_by_length(c_edge, border_pieces, len(border_pieces)//2)
+                        candidate_pieces = get_candidate_by_length(c_edge, border_pieces, len(border_pieces)//2+3)
                         friend, i, theta, trans = find_matching_piece(c_piece, c_edge, candidate_pieces, len(candidate_pieces))
                         friend.edges_[i].connected = True
                         c_edge.connected = True
@@ -304,7 +304,7 @@ class Puzzle:
                     if num < 2:
                         continue
                     if not c_edge.connected:
-                        candidate_pieces = get_candidate_by_length(c_edge, non_border_pieces,  len(non_border_pieces)//2)
+                        candidate_pieces = get_candidate_by_length(c_edge, non_border_pieces,  len(non_border_pieces)//2+3)
                         #=======NEIGHBOR CHANGE==========
                         neighbors = dict()
                         target_position = add_tuple(c_piece.position, c_edge.direction.value)
@@ -319,7 +319,7 @@ class Puzzle:
                                 neighbors[dir] = None
                         #=======NEIGHBOR CHANGE==========
                         neighbor = list(neighbors.values())
-                        friend, i, theta, trans = find_matching_piece_center(neighbor, c_edge, candidate_pieces,  len(non_border_pieces)//2+1)
+                        friend, i, theta, trans = find_matching_piece_center(neighbor, c_edge, candidate_pieces,  len(non_border_pieces)*2+3)
                         friend.edges_[i].connected = True
                         c_edge.connected = True
                         is_valid = False
@@ -419,7 +419,7 @@ def find_matching_piece(ref_piece, ref_edge, candidate_pieces, euclidean_num=3):
 #=======================================================================================================================
 
 
-def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num=3):
+def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num):
     neighbor_num = 0
     if c_edge.direction == Directions.N:
         finalI = 2
@@ -520,16 +520,9 @@ def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num
                     thetaTemp = theta_diff1
                     transTemp = translate1
 
-                if total_euclidean < minEuclidean:
-                    minEuclidean = total_euclidean
-                    minIdx = i
-                    minTheta = thetaTemp
-                    minTrans = transTemp
-                    partner_info = partner_info_temp
-
-        euclidean_differences_value.append(minEuclidean)
-        euclidean_differences_info.append((c_piece, (minIdx+finalI) % 4, minTheta, minTrans))
-        partner_info_per_piece.append(partner_info)
+                    euclidean_differences_value.append(total_euclidean)
+                    euclidean_differences_info.append((c_piece, (i + finalI) % 4, thetaTemp, transTemp))
+                    partner_info_per_piece.append(partner_info_temp)
 
     topIdx = np.argsort(euclidean_differences_value)[0:euclidean_num]
     min_ = 99999999

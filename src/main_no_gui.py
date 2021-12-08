@@ -11,4 +11,4 @@ plt.rcParams["figure.figsize"] = fig_size
 
 #args = parser.parse_args()
 #Puzzle(args.file)
-Puzzle('../input/fruits.png')
+Puzzle('../input/train_.png')
