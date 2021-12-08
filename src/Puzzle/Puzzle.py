@@ -10,7 +10,7 @@ import sys
 import scipy
 import matplotlib.pyplot as plt
 from Puzzle.tuple_helper import equals_tuple, add_tuple, sub_tuple, is_neigbhor, corner_puzzle_alignement, display_dim
-
+import os
 
 def euclidean(ref, trans):
     if len(ref) > len(trans):
@@ -26,18 +26,40 @@ def euclidean(ref, trans):
 
     return min_
 
-
-def show(large_board, dx, dy, mx, my, speed):
+#================이미지 처리 부분==========================================================================================
+def show(large_board, dx, dy, mx, my, img_count, path):
     large_board = np.roll(large_board, [-dx, -dy], axis=(0, 1))
     large_board = large_board[0:mx - dx + 100, 0:my - dy + 100]
 
-    cv2.imwrite("../result/temp.png", large_board)
-    temp = cv2.imread("../result/temp.png")
-    tempS = cv2.resize(temp, (720, 720))
-    cv2.imshow('a', tempS)
-    cv2.waitKey(speed)
-    cv2.destroyAllWindows()
+    path = path.split('/')[2]
+    filename = path.split('.')[0]
+    extension = path.split('.')[1]
+    if not os.path.exists("../result/{0}".format(filename)):
+        os.makedirs("../result/{0}".format(filename))
+    cv2.imwrite("../result/{0}/{0}_{1}.{2}".format(filename, img_count, extension) , large_board)
 
+    if img_count == 'finish':
+        make_mp4(filename, extension, count)
+
+def make_mp4(filename, extension, total_count) :
+    x, y, _ = cv2.imread("../result/{0}/{0}_finish.{1}".format(filename, extension)).shape
+    size = (max(x, y)+50, max(x, y)+50)
+
+    video_path = '../result/{0}/motion.avi'.format(filename)
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(video_path, fourcc, 8, size)
+    for i in range(0, total_count+1):
+        img = cv2.imread("../result/{0}/{0}_{1}.{2}".format(filename, i, extension))
+
+        top = (size[0]-img.shape[0])//2
+        bottom = size[0]-img.shape[0] - top
+        left = (size[1]-img.shape[1])//2
+        right = size[1]-img.shape[1]-left
+        resized_img = cv2.copyMakeBorder(img, top=top, bottom=bottom, left=left,
+                                         right=right, borderType=cv2.BORDER_CONSTANT, value = [255, 255, 255])
+        out.write(resized_img)
+    out.release()
+    sys.exit()
 
 def boundary(x, y, min_x, min_y, max_x, max_y):
     if x < min_x:
@@ -49,7 +71,7 @@ def boundary(x, y, min_x, min_y, max_x, max_y):
     if y > max_y:
         max_y = y
     return min_x, min_y, max_x, max_y
-
+#=======================================================================================================================
 
 def find_opposite_side(piece, dir):
     if dir == Directions.S:
@@ -196,6 +218,8 @@ class Puzzle:
         minY = 2999
         maxX = 0
         maxY = 0
+        global count
+        count = -1
 
         # 분류 작업;
         for piece in self.pieces_:
@@ -255,7 +279,8 @@ class Puzzle:
                         break
                 if not is_valid:
                     break
-            show(largeBoard, minX, minY, maxX, maxY, 1)
+            count += 1
+            show(largeBoard, minX, minY, maxX, maxY, count, path)
 
         # Border 조각 완료 후 connected 정리
         for piece in complete_pieces:
@@ -272,6 +297,12 @@ class Puzzle:
             is_valid = True
             for c_piece in complete_pieces:
                 for c_edge in c_piece.edges_:
+                    num = 0
+                    for dir in directions :
+                        if add_tuple(add_tuple(c_piece.position, c_edge.direction.value), dir.value) in grid_completed:
+                            num += 1
+                    if num < 2:
+                        continue
                     if not c_edge.connected:
                         candidate_pieces = get_candidate_by_length(c_edge, non_border_pieces,  len(non_border_pieces)//2)
                         #=======NEIGHBOR CHANGE==========
@@ -325,9 +356,11 @@ class Puzzle:
 
                 print('\n')
             '''
+            count += 1
+            show(largeBoard, minX, minY, maxX, maxY, count, path)
 
-            show(largeBoard, minX, minY, maxX, maxY, 1)
-
+#========이미지 처리 부분==================================================================================================
+        show(largeBoard, minX, minY, maxX, maxY, 'finish', path)
 #=======================================================================================================================
 
 
@@ -387,7 +420,7 @@ def find_matching_piece(ref_piece, ref_edge, candidate_pieces, euclidean_num=3):
 
 
 def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num=3):
-
+    neighbor_num = 0
     if c_edge.direction == Directions.N:
         finalI = 2
     elif c_edge.direction == Directions.E:
@@ -403,6 +436,7 @@ def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num
     nEdge4 = neighbor[3]
 
     if nEdge1 is not None:
+        neighbor_num += 1
         x1_1, y1_1 = nEdge1.shape[0]
         x2_1, y2_1 = nEdge1.shape[-1]
         theta1 = math.atan2(y2_1 - y1_1, x2_1 - x1_1)
@@ -411,6 +445,7 @@ def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num
         nEdge1Info = None
 
     if nEdge2 is not None:
+        neighbor_num += 1
         x1_2, y1_2 = nEdge2.shape[0]
         x2_2, y2_2 = nEdge2.shape[-1]
         theta2 = math.atan2(y2_2 - y1_2, x2_2 - x1_2)
@@ -419,6 +454,7 @@ def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num
         nEdge2Info = None
 
     if nEdge3 is not None:
+        neighbor_num += 1
         x1_3, y1_3 = nEdge3.shape[0]
         x2_3, y2_3 = nEdge3.shape[-1]
         theta3 = math.atan2(y2_3 - y1_3, x2_3 - x1_3)
@@ -427,6 +463,7 @@ def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num
         nEdge3Info = None
 
     if nEdge4 is not None:
+        neighbor_num += 1
         x1_4, y1_4 = nEdge4.shape[0]
         x2_4, y2_4 = nEdge4.shape[-1]
         theta4 = math.atan2(y2_4 - y1_4, x2_4 - x1_4)
@@ -440,11 +477,14 @@ def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num
     euclidean_differences_value = []
     ret = None
 
+    partner_info_per_piece = []
+
     for c_piece in candidate_pieces:
         minEuclidean = 999999999
         minIdx = 0
         minTheta = None
         minTrans = None
+        partner_info = []
 
         for i in range(4):
             if ((nEdge1 is not None) and (c_piece.edges_[i].type == nEdge1.type)) or \
@@ -454,11 +494,9 @@ def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num
                 continue
             else:
                 total_euclidean = 0
-                one_or_two = 1
-                thetaTemp1 = None
-                thetaTemp2 = None
-                transTemp1 = None
-                transTemp2 = None
+                thetaTemp = 0
+                transTemp = 0
+                partner_info_temp = []
 
                 for idx, nEdge in enumerate(neighbor):
                     if nEdge is None:
@@ -466,42 +504,50 @@ def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num
 
                     x, y, theta = nEdgeInfo[idx]
                     edge = c_piece.edges_[(i+idx) % 4]
+                    partner_info_temp.append((nEdge, edge))
 
                     translated_pixels1, theta_diff1, translate1 = rotate_edge_pixels(x, y, theta, edge, -1)
                     translated_pixels2, theta_diff2, translate2 = rotate_edge_pixels(x, y, theta, edge, 0)
 
                     diff1 = euclidean(nEdge.shape, np.flip(translated_pixels1, axis=0))
                     diff2 = euclidean(nEdge.shape, translated_pixels2)
-                    total_euclidean += min(diff1, diff2)
-                    thetaTemp1 = theta_diff1
-                    thetaTemp2 = theta_diff2
-                    transTemp1 = translate1
-                    transTemp2 = translate2
 
-                    if diff1 > diff2:
-                        one_or_two = 2
+                    if diff2 < diff1 :
+                        diff1 = diff2
+                        translated_pixels1, theta_diff1, translate1 = translated_pixels2, theta_diff2, translate2
+
+                    total_euclidean += diff1
+                    thetaTemp = theta_diff1
+                    transTemp = translate1
 
                 if total_euclidean < minEuclidean:
                     minEuclidean = total_euclidean
                     minIdx = i
-                    if one_or_two == 1:
-                        minTheta = thetaTemp1
-                        minTrans = transTemp1
-                    else:
-                        minTheta = thetaTemp2
-                        minTrans = transTemp2
+                    minTheta = thetaTemp
+                    minTrans = transTemp
+                    partner_info = partner_info_temp
 
         euclidean_differences_value.append(minEuclidean)
         euclidean_differences_info.append((c_piece, (minIdx+finalI) % 4, minTheta, minTrans))
+        partner_info_per_piece.append(partner_info)
 
     topIdx = np.argsort(euclidean_differences_value)[0:euclidean_num]
     min_ = 99999999
     for idx in topIdx:
-        edge_idx = euclidean_differences_info[idx][1]
-        edge = euclidean_differences_info[idx][0].edges_[edge_idx]
-        color_norm = c_edge.color_norm(edge)
-        if color_norm + euclidean_differences_value[idx] / 75 < min_:
-            min_ = color_norm + euclidean_differences_value[idx] / 75
-            ret = euclidean_differences_info[idx]
+        color_norm_total = 0
+        pairs = partner_info_per_piece[idx]
+        for n_edge, f_edge in pairs :
+            color_norm_total += n_edge.color_norm(f_edge)
 
+        if len(pairs) != 0 :
+            color_norm_total /= len(pairs)
+        #edge_idx = euclidean_differences_info[idx][1]
+        #edge = euclidean_differences_info[idx][0].edges_[edge_idx]
+        #color_norm_total = c_edge.color_norm(edge)
+        # (color_norm_total, euclidean_differences_value[idx] / 75)
+
+        if color_norm_total + euclidean_differences_value[idx] / 75 < min_:
+            min_ = color_norm_total + euclidean_differences_value[idx] / 75
+            ret = euclidean_differences_info[idx]
+    #print('\n')
     return ret
