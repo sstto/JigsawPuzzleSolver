@@ -20,18 +20,6 @@ def rotate_direction(dir, step):
     return directions[(i + step) % 4]
 
 
-def step_direction(dir1, dir2):
-    return (directions.index(dir1) - directions.index(dir2) + 4) % 4
-
-
-def get_opposite_direction(dir1):
-    """ Helper to find the opposite direction of dir1 """
-
-    for dir2 in directions:
-        if dir1.value[0] == -dir2.value[0] and dir1.value[1] == -dir2.value[1]:
-            return dir2
-
-
 class TypeEdge(Enum):
     """ Enum used to keep track of the type of edges """
 
@@ -47,11 +35,3 @@ class TypePiece(Enum):
     CENTER = 0
     BORDER = 1
     ANGLE = 2
-
-
-class Strategy(Enum):
-    """ Enum used to keep track of the strategy used to solve the puzzle """
-
-    NAIVE = 0
-    FILL = 1
-    BORDER = 2

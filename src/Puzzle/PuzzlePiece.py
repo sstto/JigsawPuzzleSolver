@@ -3,12 +3,6 @@ from Puzzle.Enums import directions, Directions, TypeEdge, TypePiece, rotate_dir
 import math
 
 class PuzzlePiece:
-    """
-        Wrapper used to store information about pieces of the puzzle.
-        Contains the position of the piece in the puzzle graph, a list of edges,
-        the list of pixels composing the piece, the number of borders and the type
-        of the piece.
-    """
 
     def __init__(self, edges, img_piece):
         self.position = (0, 0)

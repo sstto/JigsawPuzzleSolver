@@ -1,10 +1,8 @@
 import colorsys
 from colorsys import rgb_to_hls
-
 import cv2
 import numpy as np
 import math, pickle, os
-
 from Img.Pixel import Pixel, flatten_colors
 from Puzzle.Edge import Edge
 from Puzzle.Enums import directions, TypeEdge

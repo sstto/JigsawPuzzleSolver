@@ -1,15 +1,12 @@
-from Puzzle.Distance import diff_match_edges, real_edge_compute, generated_edge_compute
 from Puzzle.PuzzlePiece import *
 from Puzzle.Extractor import Extractor
-from Puzzle.Mover import *
 from cv2 import cv2
 import math
 import numpy as np
 from Puzzle.Enums import *
 import sys
 import scipy
-import matplotlib.pyplot as plt
-from Puzzle.tuple_helper import equals_tuple, add_tuple, sub_tuple, is_neigbhor, corner_puzzle_alignement, display_dim
+from Puzzle.tuple_helper import *
 import os
 
 def euclidean(ref, trans):
@@ -58,6 +55,11 @@ def make_mp4(filename, extension, total_count) :
         resized_img = cv2.copyMakeBorder(img, top=top, bottom=bottom, left=left,
                                          right=right, borderType=cv2.BORDER_CONSTANT, value = [255, 255, 255])
         out.write(resized_img)
+        if i == total_count :
+            out.write(resized_img)
+            out.write(resized_img)
+            out.write(resized_img)
+            out.write(resized_img)
     out.release()
     sys.exit()
 
@@ -252,7 +254,7 @@ class Puzzle:
 
                     if not c_edge.connected:
                         candidate_pieces = get_candidate_by_length(c_edge, border_pieces, len(border_pieces)//2+3)
-                        friend, i, theta, trans = find_matching_piece(c_piece, c_edge, candidate_pieces, len(candidate_pieces))
+                        friend, i, theta, trans = find_matching_piece(c_piece, c_edge, candidate_pieces, len(candidate_pieces)*2+3)
                         friend.edges_[i].connected = True
                         c_edge.connected = True
 
@@ -348,14 +350,6 @@ class Puzzle:
                         break
                 if not is_valid:
                     break
-            '''
-            for k, v in grid_completed.items() :
-                print('grid: ', k, )
-                for edge in v.edges_ :
-                    print('dir: ', edge.direction, 'connected?:' , edge.connected)
-
-                print('\n')
-            '''
             count += 1
             show(largeBoard, minX, minY, maxX, maxY, count, path)
 
@@ -364,7 +358,7 @@ class Puzzle:
 #=======================================================================================================================
 
 
-def find_matching_piece(ref_piece, ref_edge, candidate_pieces, euclidean_num=3):
+def find_matching_piece(ref_piece, ref_edge, candidate_pieces, euclidean_num):
     r_x1, r_y1 = ref_edge.shape[0]
     r_x2, r_y2 = ref_edge.shape[-1]
     r_theta = math.atan2(r_y2 - r_y1, r_x2 - r_x1)
@@ -398,7 +392,7 @@ def find_matching_piece(ref_piece, ref_edge, candidate_pieces, euclidean_num=3):
                 if abs(border_theta_diff)<0.05 or np.pi - abs(border_theta_diff)< 0.05:
                     euclidean_differences_value.append(diff1)
                     euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
-            elif  ref_piece.nBorders_== 2:
+            elif  ref_piece.nBorders_== 2 :
                 euclidean_differences_value.append(diff1)
                 euclidean_differences_info.append((candidate_piece, i, theta_diff1, translate1))
 
@@ -480,11 +474,6 @@ def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num
     partner_info_per_piece = []
 
     for c_piece in candidate_pieces:
-        minEuclidean = 999999999
-        minIdx = 0
-        minTheta = None
-        minTrans = None
-        partner_info = []
 
         for i in range(4):
             if ((nEdge1 is not None) and (c_piece.edges_[i].type == nEdge1.type)) or \
@@ -494,8 +483,6 @@ def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num
                 continue
             else:
                 total_euclidean = 0
-                thetaTemp = 0
-                transTemp = 0
                 partner_info_temp = []
 
                 for idx, nEdge in enumerate(neighbor):
@@ -532,15 +519,11 @@ def find_matching_piece_center(neighbor, c_edge, candidate_pieces, euclidean_num
         for n_edge, f_edge in pairs :
             color_norm_total += n_edge.color_norm(f_edge)
 
-        if len(pairs) != 0 :
+        if len(pairs) != 0:
             color_norm_total /= len(pairs)
-        #edge_idx = euclidean_differences_info[idx][1]
-        #edge = euclidean_differences_info[idx][0].edges_[edge_idx]
-        #color_norm_total = c_edge.color_norm(edge)
-        # (color_norm_total, euclidean_differences_value[idx] / 75)
 
         if color_norm_total + euclidean_differences_value[idx] / 75 < min_:
             min_ = color_norm_total + euclidean_differences_value[idx] / 75
             ret = euclidean_differences_info[idx]
-    #print('\n')
+
     return ret

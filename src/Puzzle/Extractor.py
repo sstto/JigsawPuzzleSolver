@@ -7,6 +7,7 @@ from Img.filters import *
 
 PREPROCESS_DEBUG_MODE = 0
 
+
 def show_image(img, ind=None, name='image', show=True):
     """ Helper used for matplotlib image display """
 
@@ -15,6 +16,7 @@ def show_image(img, ind=None, name='image', show=True):
     if show:
         plt.show()
 
+
 def show_contours(contours, imgRef):
     """ Helper used for matplotlib contours display """
 
@@ -22,6 +24,7 @@ def show_contours(contours, imgRef):
     cv2.drawContours(whiteImg, contours, -1, (255, 0, 0), 1, maxLevel=1)
     show_image(whiteImg)
     cv2.imwrite("../result/cont.png", whiteImg)
+
 
 class Extractor():
     """
