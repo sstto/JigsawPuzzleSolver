@@ -2,7 +2,6 @@ from enum import Enum
 
 
 class Directions(Enum):
-    """ Directions used to keep track of orientation of edges """
 
     N = (0, 1)
     S = (0, -1)

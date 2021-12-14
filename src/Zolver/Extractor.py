@@ -3,7 +3,7 @@ from scipy import ndimage
 from cv2 import cv2
 import sys
 import numpy as np
-from Img.filters import *
+from Zolver.filters import *
 
 PREPROCESS_DEBUG_MODE = 0
 

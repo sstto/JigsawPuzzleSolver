@@ -8,19 +8,9 @@ class PuzzlePiece:
         self.position = (0, 0)
         self.edges_ = edges
         self.img_piece_ = img_piece  # List of Pixels
-        self.nBorders_ = self.number_of_border()
+        self.nBorders_ = len(list(filter(lambda x: x.type == TypeEdge.BORDER, self.edges_)))
         self.type = TypePiece(self.nBorders_)
 
-    def number_of_border(self):
-        """ Fast computations of the number of borders """
-
-        return len(list(filter(lambda x: x.type == TypeEdge.BORDER, self.edges_)))
-
-    def rotate_edges(self, r):
-        """ Rotate the edges """
-
-        for e in self.edges_:
-            e.direction = rotate_direction(e.direction, r)
 
     def edge_in_direction(self, dir):
         """ Return the edge in the `dir` direction """
@@ -38,7 +28,6 @@ class PuzzlePiece:
         return False
 
 
-    #=============================================TMP==========================
     def border_angle(self, p2, task):
 
         for e in self.edges_:

@@ -1,13 +1,13 @@
-from Puzzle.PuzzlePiece import *
-from Puzzle.Extractor import Extractor
+from Zolver.Extractor import *
 from cv2 import cv2
 import math
 import numpy as np
-from Puzzle.Enums import *
 import sys
 import scipy
+from Puzzle.PuzzlePiece import *
 from Puzzle.tuple_helper import *
 import os
+
 
 def euclidean(ref, trans):
     if len(ref) > len(trans):
@@ -23,7 +23,7 @@ def euclidean(ref, trans):
 
     return min_
 
-#================이미지 처리 부분==========================================================================================
+#================결과 이미지 처리 부분==========================================================================================
 def show(large_board, dx, dy, mx, my, img_count, path):
     large_board = np.roll(large_board, [-dx, -dy], axis=(0, 1))
     large_board = large_board[0:mx - dx + 100, 0:my - dy + 100]
@@ -353,7 +353,7 @@ class Puzzle:
             count += 1
             show(largeBoard, minX, minY, maxX, maxY, count, path)
 
-#========이미지 처리 부분==================================================================================================
+#========결과 이미지 처리 부분==================================================================================================
         show(largeBoard, minX, minY, maxX, maxY, 'finish', path)
 #=======================================================================================================================
 

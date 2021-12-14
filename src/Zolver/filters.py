@@ -3,7 +3,7 @@ from colorsys import rgb_to_hls
 import cv2
 import numpy as np
 import math, pickle, os
-from Img.Pixel import Pixel, flatten_colors
+from Zolver.Pixel import Pixel, flatten_colors
 from Puzzle.Edge import Edge
 from Puzzle.Enums import directions, TypeEdge
 from Puzzle.PuzzlePiece import PuzzlePiece
@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import scipy, sklearn.preprocessing
 import itertools
-from Img.peak_detect import *
+from Zolver.peak_detect import *
 
 COUNT = 0
 
